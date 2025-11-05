@@ -1,0 +1,55 @@
+@import "tailwindcss";
+
+:root {
+  --background: #0f1115;
+  --foreground: #ededed;
+  --primary-yellow: #fee801;
+  --secondary-purple: #7c5cff;
+  --card-bg: #1a1d24;
+  --border-color: rgba(254, 232, 1, 0.2);
+  --input-bg: #0f1115;
+  --input-border: #4a4a4a;
+}
+
+:root.light {
+  --background: #ffffff;
+  --foreground: #1a1a1a;
+  --primary-yellow: #f5c400;
+  --secondary-purple: #6b4de6;
+  --card-bg: #f8f9fa;
+  --border-color: rgba(245, 196, 0, 0.3);
+  --input-bg: #ffffff;
+  --input-border: #d1d5db;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+@layer utilities {
+  .glow-purple {
+    box-shadow: 0 0 20px rgba(124, 92, 255, 0.5);
+  }
+  
+  .glow-yellow {
+    box-shadow: 0 0 20px rgba(254, 232, 1, 0.5);
+  }
+
+  .bg-card {
+    background-color: var(--card-bg);
+  }
+
+  .border-theme {
+    border-color: var(--border-color);
+  }
+
+  .bg-input {
+    background-color: var(--input-bg);
+  }
+
+  .border-input {
+    border-color: var(--input-border);
+  }
+}
