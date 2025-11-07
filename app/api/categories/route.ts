@@ -31,7 +31,7 @@ export async function GET() {
 
     // Count vocab per category
     const categoryMap = new Map<string, number>();
-    categories?.forEach((item: any) => {
+    categories?.forEach((item: { category: string }) => {
       const count = categoryMap.get(item.category) || 0;
       categoryMap.set(item.category, count + 1);
     });

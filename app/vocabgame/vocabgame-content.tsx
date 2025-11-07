@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Clock, CheckCircle2, XCircle, Lightbulb, ArrowLeft } from 'lucide-react';
 import ThemeToggle from '@/components/ThemeToggle';
@@ -23,8 +23,11 @@ interface GameResult {
   time_taken: number;
 }
 
-export default function VocabPage() {
+export default function VocabGameContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const category = searchParams.get('category');
+  const subcategory = searchParams.get('subcategory');
 
   // Game state
   const [words, setWords] = useState<VocabWord[]>([]);
@@ -61,14 +64,24 @@ export default function VocabPage() {
     }
   }, [timer, showHint, feedback, words, currentIndex, userAnswer]);
 
-  // Fetch words on mount
+  // Fetch words on mount - REQUIRED category and subcategory
   useEffect(() => {
+    if (!category || !subcategory) {
+      alert('Category and Subcategory are required!');
+      router.push('/dashboard');
+      return;
+    }
+    
     let isMounted = true;
     
     const loadWords = async () => {
       try {
-        // Fetch ALL words (no category/subcategory filter)
-        const url = '/api/getBatch';
+        // Use custom batch endpoint - directly fetch words without "due today" filter
+        const params = new URLSearchParams();
+        params.append('category', category);
+        params.append('subcategory', subcategory);
+        
+        const url = `/api/getCustomBatch?${params.toString()}`;
         
         const response = await fetch(url);
         if (!response.ok) {
@@ -77,17 +90,18 @@ export default function VocabPage() {
         }
         
         const data = await response.json();
-        console.log('📚 Fetched vocab batch:', data);
-        console.log(`📊 Total words received: ${data.count}`);
+        console.log('📚 Fetched custom vocab batch:', data);
+        console.log(`📊 Selected: ${data.count} words, Total available: ${data.total_available}`);
+        console.log(`🎯 Filter: category=${category}, subcategory=${subcategory}`);
         
-        // API returns { success, words, count }
+        // API returns { success, words, count, total_available }
         if (data.words && Array.isArray(data.words)) {
           if (data.words.length === 0) {
-            console.log('⚠️ No words available - all words reviewed for today');
+            console.log('⚠️ No words available for this category and subcategory');
             if (isMounted) setWords([]);
           } else {
             if (isMounted) setWords(data.words);
-            console.log(`✅ Loaded ${data.words.length} words for practice`);
+            console.log(`✅ Loaded ${data.words.length} words for custom practice`);
           }
         } else {
           throw new Error('Invalid data format from API');
@@ -108,12 +122,20 @@ export default function VocabPage() {
     return () => {
       isMounted = false;
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [category, subcategory, router]);
 
   const fetchWords = async () => {
     try {
-      // Fetch ALL words (no category/subcategory filter)
-      const url = '/api/getBatch';
+      if (!category || !subcategory) {
+        throw new Error('Category and subcategory are required');
+      }
+
+      // Use custom batch endpoint - directly fetch words without "due today" filter
+      const params = new URLSearchParams();
+      params.append('category', category);
+      params.append('subcategory', subcategory);
+      
+      const url = `/api/getCustomBatch?${params.toString()}`;
       
       const response = await fetch(url);
       if (!response.ok) {
@@ -122,17 +144,18 @@ export default function VocabPage() {
       }
       
       const data = await response.json();
-      console.log('📚 Fetched vocab batch:', data);
-      console.log(`📊 Total words received: ${data.count}`);
+      console.log('📚 Fetched custom vocab batch:', data);
+      console.log(`📊 Selected: ${data.count} words, Total available: ${data.total_available}`);
+      console.log(`🎯 Filter: category=${category}, subcategory=${subcategory}`);
       
-      // API returns { success, words, count }
+      // API returns { success, words, count, total_available }
       if (data.words && Array.isArray(data.words)) {
         if (data.words.length === 0) {
-          console.log('⚠️ No words available - all words reviewed for today');
+          console.log('⚠️ No words available for this category and subcategory');
           setWords([]);
         } else {
           setWords(data.words);
-          console.log(`✅ Loaded ${data.words.length} words for practice`);
+          console.log(`✅ Loaded ${data.words.length} words for custom practice`);
         }
       } else {
         throw new Error('Invalid data format from API');
@@ -316,16 +339,16 @@ export default function VocabPage() {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <div className="text-center max-w-md">
-          <div className="text-6xl mb-4">🎉</div>
-          <h2 className="text-2xl font-bold text-text-primary mb-2">Great Job!</h2>
+          <div className="text-6xl mb-4">📚</div>
+          <h2 className="text-2xl font-bold text-text-primary mb-2">No Words Available</h2>
           <p className="text-text-secondary mb-6">
-            You&apos;ve reviewed all words due for today. Come back tomorrow for more practice, or check your dashboard for stats!
+            There are no words in &quot;{category}&quot; Part {subcategory} yet. Please try another category or part.
           </p>
           <button
-            onClick={() => router.push('/dashboard')}
+            onClick={() => router.push(`/category-menu/${category}`)}
             className="px-6 py-3 bg-[#fee801] text-black rounded-lg font-semibold hover:scale-105 transition-transform"
           >
-            Back to Dashboard
+            Back to Menu
           </button>
         </div>
       </div>
@@ -346,7 +369,7 @@ export default function VocabPage() {
         <div className="max-w-4xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between mb-2">
             <button
-              onClick={() => router.push('/dashboard')}
+              onClick={() => router.push(`/category-menu/${category}`)}
               className="flex items-center gap-2 text-text-secondary hover:text-[#fee801] transition-colors"
             >
               <ArrowLeft className="w-5 h-5" />
@@ -363,6 +386,16 @@ export default function VocabPage() {
               <Clock className="w-5 h-5" />
               <span className="font-mono">{timer}s</span>
             </div>
+          </div>
+
+          {/* Category & Subcategory Badges */}
+          <div className="text-center flex items-center justify-center gap-2">
+            <span className="inline-block px-4 py-1 bg-[#7c5cff] text-white text-sm font-semibold rounded-full capitalize">
+              {category}
+            </span>
+            <span className="inline-block px-4 py-1 bg-[#fee801] text-black text-sm font-semibold rounded-full">
+              Part {subcategory}
+            </span>
           </div>
         </div>
       </div>
@@ -500,7 +533,7 @@ export default function VocabPage() {
       {showResultModal && (
         <ResultModal
           results={gameResults}
-          words={words}
+          category={category || ''}
           onClose={() => router.push('/dashboard')}
           onPlayAgain={() => {
             setShowResultModal(false);
@@ -518,14 +551,17 @@ export default function VocabPage() {
 // Result Modal Component
 function ResultModal({
   results,
+  category,
   onClose,
   onPlayAgain,
 }: {
   results: GameResult[];
   words?: VocabWord[];
+  category: string;
   onClose: () => void;
   onPlayAgain: () => void;
 }) {
+  const router = useRouter();
   const { theme } = useTheme();
   const correctCount = results.filter((r) => r.correct).length;
   const accuracy = ((correctCount / results.length) * 100).toFixed(0);
@@ -615,14 +651,14 @@ function ResultModal({
               Play Again
             </button>
             <button
-              onClick={onClose}
+              onClick={() => router.push(`/category-menu/${category}`)}
               className={`flex-1 px-6 py-4 rounded-xl font-bold text-lg border-2 transition-colors hover:border-[#fee801] ${
                 theme === 'dark'
                   ? 'bg-[#2a2b2e] border-gray-700 text-white'
                   : 'bg-gray-100 border-gray-300 text-black'
               }`}
             >
-              Dashboard
+              Menu
             </button>
           </div>
         </div>

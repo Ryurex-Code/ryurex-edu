@@ -87,7 +87,7 @@ export default function Home() {
             
             <div className="relative z-10 text-center">
               <p className="text-xl md:text-2xl lg:text-3xl font-medium mb-6 leading-relaxed">
-                "It feels like playing a game, but I actually learn!"
+                &quot;It feels like playing a game, but I actually learn!&quot;
               </p>
               <div className="flex items-center justify-center space-x-3">
                 <div className="w-12 h-12 bg-gradient-to-br from-[#fee801] to-[#7c5cff] rounded-full flex items-center justify-center text-[#0f1115] font-bold">

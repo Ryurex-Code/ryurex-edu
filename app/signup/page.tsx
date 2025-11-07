@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { Mail, Lock, User, Sparkles, UserPlus } from 'lucide-react';
+import { Mail, Lock, Sparkles, UserPlus } from 'lucide-react';
 import ThemeToggle from '@/components/ThemeToggle';
 
 export default function SignUpPage() {
@@ -73,8 +73,8 @@ export default function SignUpPage() {
       setTimeout(() => {
         router.push('/login');
       }, 3000);
-    } catch (error: any) {
-      setError(error.message || 'An error occurred during sign up');
+    } catch (error: Error | unknown) {
+      setError(error instanceof Error ? error.message : 'An error occurred during sign up');
     } finally {
       setLoading(false);
     }

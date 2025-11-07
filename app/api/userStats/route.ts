@@ -31,14 +31,14 @@ export async function GET() {
 
     // Count words due today
     const today = new Date().toISOString().split('T')[0];
-    const { count: wordsDueCount, error: countError } = await supabase
+    const { count: wordsDueCount } = await supabase
       .from('user_vocab_progress')
       .select('*', { count: 'exact', head: true })
       .eq('user_id', user.id)
       .lte('next_due', today);
 
     // Get total words learned (words with at least 1 correct answer)
-    const { count: wordsLearnedCount, error: learnedError } = await supabase
+    const { count: wordsLearnedCount } = await supabase
       .from('user_vocab_progress')
       .select('*', { count: 'exact', head: true })
       .eq('user_id', user.id)
@@ -47,7 +47,6 @@ export async function GET() {
     // Calculate XP progress to next level
     // Simple linear system: Every level needs 100 XP
     const currentLevelXp = (userData.level - 1) * 100;
-    const nextLevelXp = userData.level * 100;
     
     const xpProgress = userData.xp - currentLevelXp;
     const xpNeeded = 100; // Fixed 100 XP per level
@@ -74,10 +73,10 @@ export async function GET() {
       },
     });
 
-  } catch (error: any) {
+  } catch (error: Error | unknown) {
     console.error('Error fetching user stats:', error);
     return NextResponse.json(
-      { error: 'Internal server error', details: error.message },
+      { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }

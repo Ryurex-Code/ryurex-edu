@@ -80,14 +80,15 @@ export async function GET(request: Request) {
       console.error('❌ Error fetching progress words:', progressError);
     }
 
-    let words = progressWords || [];
+    const words = progressWords || [];
 
     console.log(`✅ Found ${words.length} words due for review today`);
     
     if (words.length > 0) {
       console.log('📝 Review words:');
-      words.forEach((w: any, idx: number) => {
-        console.log(`  ${idx + 1}. ${w.vocab_master?.indo} (next_due: ${w.next_due}, fluency: ${w.fluency})`);
+      words.forEach((w: unknown, idx: number) => {
+        const word = w as { vocab_master?: { indo: string }; next_due: string; fluency: number };
+        console.log(`  ${idx + 1}. ${word.vocab_master?.indo} (next_due: ${word.next_due}, fluency: ${word.fluency})`);
       });
     }
 
@@ -98,16 +99,19 @@ export async function GET(request: Request) {
     console.log(`📊 Final batch: ${words.length} words (review due today only)`);
 
     // Format response
-    const formattedWords = words.map((item: any) => ({
-      vocab_id: item.vocab_master?.id || item.vocab_id,
-      indo: item.vocab_master?.indo,
-      english: item.vocab_master?.english,
-      class: item.vocab_master?.class,
-      category: item.vocab_master?.category,
-      subcategory: item.vocab_master?.subcategory,
-      fluency: item.fluency,
-      next_due: item.next_due,
-    }));
+    const formattedWords = words.map((item: unknown) => {
+      const word = item as { vocab_master?: { id: number; indo: string; english: string; class: string; category: string; subcategory: number }; vocab_id: number; fluency: number; next_due: string };
+      return {
+        vocab_id: word.vocab_master?.id || word.vocab_id,
+        indo: word.vocab_master?.indo,
+        english: word.vocab_master?.english,
+        class: word.vocab_master?.class,
+        category: word.vocab_master?.category,
+        subcategory: word.vocab_master?.subcategory,
+        fluency: word.fluency,
+        next_due: word.next_due,
+      };
+    });
 
     return NextResponse.json({
       success: true,
@@ -115,10 +119,10 @@ export async function GET(request: Request) {
       count: formattedWords.length,
     });
 
-  } catch (error: any) {
+  } catch (error: Error | unknown) {
     console.error('Error fetching batch:', error);
     return NextResponse.json(
-      { error: 'Internal server error', details: error.message },
+      { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }

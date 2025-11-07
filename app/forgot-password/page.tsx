@@ -28,8 +28,8 @@ export default function ForgotPasswordPage() {
       if (error) throw error;
 
       setSuccess(true);
-    } catch (error: any) {
-      setError(error.message || 'An error occurred. Please try again.');
+    } catch (error: Error | unknown) {
+      setError(error instanceof Error ? error.message : 'An error occurred. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -79,7 +79,7 @@ export default function ForgotPasswordPage() {
               Forgot Password?
             </h1>
             <p className="text-muted-foreground text-sm">
-              No worries! Enter your email and we'll send you reset instructions.
+              No worries! Enter your email and we&apos;ll send you reset instructions.
             </p>
           </div>
 
@@ -95,10 +95,10 @@ export default function ForgotPasswordPage() {
               </div>
               <h3 className="text-xl font-bold text-foreground mb-2">Check Your Email!</h3>
               <p className="text-muted-foreground text-sm mb-6">
-                We've sent password reset instructions to <span className="text-[#fee801] font-semibold">{email}</span>
+                We&apos;ve sent password reset instructions to <span className="text-[#fee801] font-semibold">{email}</span>
               </p>
               <p className="text-xs text-muted-foreground mb-4">
-                Didn't receive the email? Check your spam folder or try again.
+                Didn&apos;t receive the email? Check your spam folder or try again.
               </p>
               <button
                 onClick={() => {

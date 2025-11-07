@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
@@ -62,27 +62,13 @@ export default function CategoryMenuPage() {
   const [selectedSubcategory, setSelectedSubcategory] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    let isMounted = true;
-
-    if (categoryName) {
-      fetchCategoryData();
-    }
-
-    return () => {
-      isMounted = false;
-    };
-  }, [categoryName]);
-
-  const fetchCategoryData = async () => {
-    let isMounted = true;
-
+  const fetchCategoryData = useCallback(async () => {
     try {
       // Fetch category data with subcategories
       const response = await fetch(`/api/subcategories?category=${encodeURIComponent(categoryName)}`);
       if (!response.ok) {
         console.error('Failed to fetch category data');
-        if (isMounted) router.push('/dashboard');
+        router.push('/dashboard');
         return;
       }
       
@@ -90,14 +76,14 @@ export default function CategoryMenuPage() {
       
       // Fetch user progress for this category to calculate learned words per subcategory
       const { data: { user } } = await supabase.auth.getUser();
-      if (user && isMounted) {
+      if (user) {
         const { data: progressData, error } = await supabase
           .from('user_vocab_progress')
           .select('vocab_id, fluency')
           .eq('user_id', user.id)
           .gt('fluency', 0);
 
-        if (!error && progressData && isMounted) {
+        if (!error && progressData) {
           // Get vocab IDs that have fluency > 0
           const learnedVocabIds = new Set(progressData.map(p => p.vocab_id));
           
@@ -108,7 +94,7 @@ export default function CategoryMenuPage() {
             .eq('category', categoryName)
             .in('id', Array.from(learnedVocabIds));
 
-          if (vocabData && isMounted) {
+          if (vocabData) {
             // Count learned words per subcategory
             const learnedCountMap: { [key: number]: number } = {};
             vocabData.forEach(vocab => {
@@ -125,14 +111,20 @@ export default function CategoryMenuPage() {
         }
       }
       
-      if (isMounted) setCategoryData(data);
+      setCategoryData(data);
     } catch (error) {
       console.error('Error fetching category data:', error);
-      if (isMounted) router.push('/dashboard');
+      router.push('/dashboard');
     } finally {
-      if (isMounted) setLoading(false);
+      setLoading(false);
     }
-  };
+  }, [categoryName, supabase, router]);
+
+  useEffect(() => {
+    if (categoryName) {
+      fetchCategoryData();
+    }
+  }, [categoryName, fetchCategoryData]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();

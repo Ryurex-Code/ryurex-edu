@@ -34,8 +34,8 @@ export default function LoginPage() {
 
       router.push('/dashboard');
       router.refresh();
-    } catch (error: any) {
-      setError(error.message || 'An error occurred during login');
+    } catch (error: Error | unknown) {
+      setError(error instanceof Error ? error.message : 'An error occurred during login');
     } finally {
       setLoading(false);
     }
@@ -57,8 +57,8 @@ export default function LoginPage() {
       if (error) throw error;
 
       setMessage('Check your email for the magic link!');
-    } catch (error: any) {
-      setError(error.message || 'An error occurred');
+    } catch (error: Error | unknown) {
+      setError(error instanceof Error ? error.message : 'An error occurred');
     } finally {
       setLoading(false);
     }
@@ -203,7 +203,7 @@ export default function LoginPage() {
 
           {/* Footer */}
           <div className="mt-6 text-center text-sm text-muted-foreground">
-            Don't have an account?{' '}
+            Don&apos;t have an account?{' '}
             <Link href="/signup" className="text-[#fee801] hover:text-[#ffd700] hover:underline font-semibold transition-colors">
               Sign Up
             </Link>

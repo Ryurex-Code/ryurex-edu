@@ -43,7 +43,7 @@ export async function GET(request: Request) {
 
     // Count words per subcategory
     const subcategoryMap = new Map<number, number>();
-    vocabData?.forEach((item: any) => {
+    vocabData?.forEach((item: { subcategory: number }) => {
       const count = subcategoryMap.get(item.subcategory) || 0;
       subcategoryMap.set(item.subcategory, count + 1);
     });

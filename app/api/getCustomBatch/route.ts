@@ -78,8 +78,8 @@ export async function GET(request: NextRequest) {
     }
 
     // Separate words into new and review categories
-    const newWords: any[] = [];
-    const reviewWords: any[] = [];
+    const newWords: Array<{ id: number; indo: string; english: string; class: string; category: string; subcategory: number }> = [];
+    const reviewWords: Array<{ id: number; indo: string; english: string; class: string; category: string; subcategory: number }> = [];
 
     allWords.forEach(word => {
       const progress = progressMap.get(word.id);
@@ -94,7 +94,7 @@ export async function GET(request: NextRequest) {
 
     // Initialize progress for NEW words (words user hasn't seen before)
     if (newWords.length > 0) {
-      const newProgressEntries = newWords.map((word: any) => ({
+      const newProgressEntries = newWords.map((word: { id: number }) => ({
         user_id: user.id,
         vocab_id: word.id,
         fluency: 0,
@@ -121,7 +121,7 @@ export async function GET(request: NextRequest) {
 
     // Mix new and review words
     // Strategy: Start with some review words (if available), then new words
-    let selectedWords: any[] = [];
+    let selectedWords: Array<{ id: number; indo: string; english: string; class: string; category: string; subcategory: number }> = [];
     
     if (reviewWords.length > 0 && newWords.length > 0) {
       // Mix: 40% review, 60% new (or whatever is available)
@@ -165,7 +165,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Format response with progress data
-    const formattedWords = selectedWords.map((word: any) => {
+    const formattedWords = selectedWords.map((word: { id: number; indo: string; english: string; class: string; category: string; subcategory: number }) => {
       const progress = updatedProgressMap.get(word.id);
       return {
         vocab_id: word.id,

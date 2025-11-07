@@ -63,8 +63,8 @@ export default function UpdatePasswordPage() {
       setTimeout(() => {
         router.push('/login');
       }, 3000);
-    } catch (error: any) {
-      setError(error.message || 'An error occurred. Please try again.');
+    } catch (error: Error | unknown) {
+      setError(error instanceof Error ? error.message : 'An error occurred. Please try again.');
     } finally {
       setLoading(false);
     }

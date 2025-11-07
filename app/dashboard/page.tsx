@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { User, Trophy, BarChart3, BookOpen, LogOut, Play, Clock, Flame, Search } from 'lucide-react';
+import { Trophy, BarChart3, BookOpen, LogOut, Play, Clock, Flame, Search } from 'lucide-react';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import ThemeToggle from '@/components/ThemeToggle';
 import Image from 'next/image';
@@ -83,7 +83,7 @@ export default function DashboardPage() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [supabase.auth]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -312,7 +312,7 @@ export default function DashboardPage() {
           {/* Empty State */}
           {filteredCategories.length === 0 && (
             <div className="text-center py-12">
-              <p className="text-muted-foreground text-lg">No categories found matching "{searchQuery}"</p>
+              <p className="text-muted-foreground text-lg">No categories found matching &quot;{searchQuery}&quot;</p>
             </div>
           )}
         </motion.div>
