@@ -37,6 +37,7 @@ export default function VocabPage() {
   const [gameResults, setGameResults] = useState<GameResult[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showResultModal, setShowResultModal] = useState(false);
+  const [isSubmittingResults, setIsSubmittingResults] = useState(false);
 
   // Timer interval
   useEffect(() => {
@@ -178,6 +179,7 @@ export default function VocabPage() {
   };
 
   const submitAllResults = async (results: GameResult[]) => {
+    setIsSubmittingResults(true);
     try {
       console.log('📤 Submitting batch results:', results);
       
@@ -199,6 +201,8 @@ export default function VocabPage() {
     } catch (error) {
       console.error('❌ Error submitting batch results:', error);
       alert('Failed to save your progress. Please try again.');
+    } finally {
+      setIsSubmittingResults(false);
     }
   };
 
@@ -495,6 +499,42 @@ export default function VocabPage() {
           </motion.div>
         </AnimatePresence>
       </div>
+
+      {/* Loading Submission Modal */}
+      {isSubmittingResults && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="fixed inset-0 flex items-center justify-center p-4 z-50 bg-black/50"
+        >
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="bg-[#1a1b1e] border-2 border-[#fee801] rounded-3xl p-8 max-w-md w-full shadow-2xl"
+          >
+            <div className="text-center space-y-6">
+              {/* Spinner */}
+              <div className="flex justify-center">
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                  className="w-16 h-16 border-4 border-[#fee801] border-t-transparent rounded-full"
+                />
+              </div>
+
+              {/* Text */}
+              <div className="space-y-2">
+                <h3 className="text-2xl font-bold text-white">
+                  Submitting Your Results...
+                </h3>
+                <p className="text-gray-400 text-sm">
+                  Please wait while we save your progress
+                </p>
+              </div>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
 
       {/* Result Modal */}
       {showResultModal && (
