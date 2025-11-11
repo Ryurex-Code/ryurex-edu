@@ -31,6 +31,7 @@ interface UserStats {
 interface Category {
   name: string;
   count: number;
+  learned_count: number;
   icon: string;
 }
 
@@ -265,48 +266,64 @@ export default function DashboardPage() {
 
           {/* Category Grid */}
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-            {filteredCategories.map((category, index) => (
-              <motion.div
-                key={category.name}
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.8 + index * 0.05 }}
-              >
-                <Link href={`/category-menu/${encodeURIComponent(category.name)}`}>
-                  <div className="group bg-card border-2 border-theme rounded-2xl hover:border-[#fee801] transition-all cursor-pointer h-full flex flex-col overflow-hidden">
-                    {/* Image Container - Full width with rounded top corners */}
-                    <div className="relative w-full aspect-square bg-gradient-to-br from-[#fee801]/20 to-[#7c5cff]/20 flex items-center justify-center">
-                      <Image 
-                        src={`/images/categories/${category.name.toLowerCase()}.svg`}
-                        alt={category.name}
-                        fill
-                        className="object-cover"
-                      />
+            {filteredCategories.map((category, index) => {
+              const learnedCount = category.learned_count || 0;
+              const totalWords = category.count;
+              const progressPercentage = totalWords > 0 ? (learnedCount / totalWords) * 100 : 0;
+
+              return (
+                <motion.div
+                  key={category.name}
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.8 + index * 0.05 }}
+                >
+                  <Link href={`/category-menu/${encodeURIComponent(category.name)}`}>
+                    <div className="group bg-card border-2 border-theme rounded-2xl hover:border-[#fee801] transition-all cursor-pointer h-full flex flex-col overflow-hidden">
+                      {/* Image Container - Full width with rounded top corners */}
+                      <div className="relative w-full aspect-square bg-gradient-to-br from-[#fee801]/20 to-[#7c5cff]/20 flex items-center justify-center">
+                        <Image 
+                          src={`/images/categories/${category.name.toLowerCase()}.svg`}
+                          alt={category.name}
+                          fill
+                          className="object-cover"
+                        />
+                        
+                      </div>
                       
+                      {/* Content Section */}
+                      <div className="p-4 flex flex-col flex-grow">
+                        {/* Category Name */}
+                        <h3 className="text-lg font-bold text-center mb-3 group-hover:text-[#fee801] transition-colors">
+                          {category.name}
+                        </h3>
+
+                        {/* Progress Bar */}
+                        <div className="mb-4 space-y-1">
+                          <div className="w-full bg-input border border-input rounded-full h-2 overflow-hidden">
+                            <motion.div
+                              initial={{ width: 0 }}
+                              animate={{ width: `${progressPercentage}%` }}
+                              transition={{ duration: 0.8, ease: 'easeOut' }}
+                              className="h-full bg-[#fee801]"
+                            />
+                          </div>
+                          <p className="text-xs text-muted-foreground text-center">
+                            {learnedCount} of {totalWords} learned
+                          </p>
+                        </div>
+                        
+                        {/* Play Button */}
+                        <button className="w-full py-2 bg-[#fee801] text-black rounded-lg font-semibold text-sm flex items-center justify-center gap-2 hover:bg-[#fef030] transition-colors group-hover:scale-105 cursor-pointer">
+                          <Play className="w-4 h-4" />
+                          Play
+                        </button>
+                      </div>
                     </div>
-                    
-                    {/* Content Section */}
-                    <div className="p-4 flex flex-col flex-grow">
-                      {/* Category Name */}
-                      <h3 className="text-lg font-bold text-center mb-2 group-hover:text-[#fee801] transition-colors">
-                        {category.name}
-                      </h3>
-                      
-                      {/* Word Count */}
-                      <p className="text-sm text-muted-foreground text-center mb-4">
-                        {category.count} words
-                      </p>
-                      
-                      {/* Play Button */}
-                      <button className="w-full mt-auto py-2 bg-[#fee801] text-black rounded-lg font-semibold text-sm flex items-center justify-center gap-2 hover:bg-[#fef030] transition-colors group-hover:scale-105 cursor-pointer">
-                        <Play className="w-4 h-4" />
-                        Play
-                      </button>
-                    </div>
-                  </div>
-                </Link>
-              </motion.div>
-            ))}
+                  </Link>
+                </motion.div>
+              );
+            })}
           </div>
 
           {/* Empty State */}

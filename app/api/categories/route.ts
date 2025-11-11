@@ -18,7 +18,7 @@ export async function GET() {
     // Get all categories with count
     const { data: categories, error: categoryError } = await supabase
       .from('vocab_master')
-      .select('category')
+      .select('category, id')
       .order('category', { ascending: true });
 
     if (categoryError) {
@@ -30,13 +30,24 @@ export async function GET() {
     }
 
     // Count vocab per category
-    const categoryMap = new Map<string, number>();
-    categories?.forEach((item: { category: string }) => {
-      const count = categoryMap.get(item.category) || 0;
-      categoryMap.set(item.category, count + 1);
+    const categoryMap = new Map<string, { count: number; vocabIds: string[] }>();
+    categories?.forEach((item: { category: string; id: string }) => {
+      const existing = categoryMap.get(item.category) || { count: 0, vocabIds: [] };
+      existing.count += 1;
+      existing.vocabIds.push(item.id);
+      categoryMap.set(item.category, existing);
     });
 
-    // Convert to array with icons
+    // Get user's learned words (fluency > 0)
+    const { data: progressData } = await supabase
+      .from('user_vocab_progress')
+      .select('vocab_id, fluency')
+      .eq('user_id', user.id)
+      .gt('fluency', 0);
+
+    const learnedVocabIds = new Set(progressData?.map((p: { vocab_id: string }) => p.vocab_id) || []);
+
+    // Convert to array with icons and learned count
     const categoryIcons: { [key: string]: string } = {
       'Emotion': '😊',
       'Family': '👨‍👩‍👧‍👦',
@@ -51,11 +62,15 @@ export async function GET() {
       'Object': '📦',
     };
 
-    const formattedCategories = Array.from(categoryMap.entries()).map(([name, count]) => ({
-      name,
-      count,
-      icon: categoryIcons[name] || '📚',
-    }));
+    const formattedCategories = Array.from(categoryMap.entries()).map(([name, data]) => {
+      const learnedCount = data.vocabIds.filter(id => learnedVocabIds.has(id)).length;
+      return {
+        name,
+        count: data.count,
+        learned_count: learnedCount,
+        icon: categoryIcons[name] || '📚',
+      };
+    });
 
     return NextResponse.json({
       success: true,

@@ -21,16 +21,24 @@ export default function UpdatePasswordPage() {
   // Check if user came from valid password reset link
   useEffect(() => {
     const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        setIsValidSession(true);
-      } else {
-        setError('Invalid or expired reset link. Please request a new one.');
+      try {
+        // First refresh the session to get the latest auth state
+        await supabase.auth.refreshSession();
+        
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          setIsValidSession(true);
+        } else {
+          setError('Invalid or expired reset link. Please request a new one.');
+        }
+      } catch (err) {
+        console.error('Session check error:', err);
+        setError('Unable to verify session. Please request a new password reset link.');
       }
     };
     
     checkSession();
-  }, [supabase.auth]);
+  }, [supabase]);
 
   const handleUpdatePassword = async (e: React.FormEvent) => {
     e.preventDefault();
