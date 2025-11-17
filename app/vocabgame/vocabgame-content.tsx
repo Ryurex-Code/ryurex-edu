@@ -5,7 +5,6 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Clock, CheckCircle2, XCircle, Lightbulb, ArrowLeft, RotateCcw, ChevronRight, Home } from 'lucide-react';
 import ThemeToggle from '@/components/ThemeToggle';
-import { useTheme } from '@/context/ThemeContext';
 
 interface VocabWord {
   vocab_id: number;
@@ -638,7 +637,6 @@ export default function VocabGameContent() {
       {showResultModal && (
         <ResultModal
           results={gameResults}
-          category={category || ''}
           subcategory={subcategory || ''}
           hasNextPart={hasNextPart}
           onClose={() => router.push('/dashboard')}
@@ -667,7 +665,6 @@ export default function VocabGameContent() {
 // Result Modal Component
 function ResultModal({
   results,
-  category,
   subcategory,
   hasNextPart,
   onClose,
@@ -676,15 +673,12 @@ function ResultModal({
 }: {
   results: GameResult[];
   words?: VocabWord[];
-  category: string;
   subcategory: string | number;
   hasNextPart: boolean;
   onClose: () => void;
   onPlayAgain: () => void;
   onNextPart: (nextSubcategory: number) => void;
 }) {
-  const _router = useRouter();
-  const { theme } = useTheme();
 
   const correctCount = results.filter((r) => r.correct).length;
   const accuracy = ((correctCount / results.length) * 100).toFixed(0);

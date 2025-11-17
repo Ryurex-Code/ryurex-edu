@@ -8,6 +8,14 @@ import { ArrowLeft, Play, LogOut } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import ThemeToggle from '@/components/ThemeToggle';
 
+// Helper function to convert 'a1-oxford' to 'A1 Oxford'
+const formatCategoryName = (category: string): string => {
+  return category
+    .split('-')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+};
+
 interface Subcategory {
   subcategory: number;
   word_count: number;
@@ -33,7 +41,7 @@ const categoryImages: { [key: string]: string } = {
   'time': '/images/categories/time.svg',
   'place': '/images/categories/place.svg',
   'object': '/images/categories/object.svg',
-  'a1 oxford': '/images/categories/A1 Oxford.svg',
+  'a1-oxford': '/images/categories/a1-oxford.svg',
 };
 
 // Fallback emoji if image not found
@@ -49,6 +57,7 @@ const categoryEmojis: { [key: string]: string } = {
   'time': '⏰',
   'place': '🏠',
   'object': '📦',
+  'a1-oxford': '📚',
 };
 
 export default function CategoryMenuPage() {
@@ -304,8 +313,8 @@ export default function CategoryMenuPage() {
 
                 {/* Content */}
                 <div className="p-6">
-                  <h2 className="text-2xl font-bold text-text-primary mb-2 capitalize">
-                    {categoryName}
+                  <h2 className="text-2xl font-bold text-text-primary mb-2">
+                    {formatCategoryName(categoryName)}
                   </h2>
                   <p className="text-text-secondary">
                     {categoryData.total_words} words total
