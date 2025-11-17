@@ -33,7 +33,7 @@ const categoryImages: { [key: string]: string } = {
   'time': '/images/categories/time.svg',
   'place': '/images/categories/place.svg',
   'object': '/images/categories/object.svg',
-  'a1 oxford': '/images/categories/a1 oxford.svg',
+  'a1 oxford': '/images/categories/A1 Oxford.svg',
 };
 
 // Fallback emoji if image not found
