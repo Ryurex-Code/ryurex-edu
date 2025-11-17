@@ -51,7 +51,7 @@ export default function Hero() {
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                className="relative px-8 md:px-12 py-4 md:py-5 text-lg md:text-xl font-semibold bg-gradient-to-r from-[#fee801] to-[#ffd700] text-[#0f1115] rounded-full shadow-lg overflow-hidden group"
+                className="relative px-8 md:px-12 py-4 md:py-5 text-lg md:text-xl font-semibold bg-gradient-to-r from-[#fee801] to-[#D4AF37] text-[#0f1115] rounded-full shadow-lg overflow-hidden group"
               >
                 <span className="relative z-10">Start Learning →</span>
                 

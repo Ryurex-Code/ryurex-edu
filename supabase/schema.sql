@@ -12,6 +12,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE TABLE IF NOT EXISTS public.users (
   id uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   username text,
+  display_name text,
   xp integer DEFAULT 0,
   level integer DEFAULT 1,
   streak integer DEFAULT 0,
@@ -139,10 +140,15 @@ CREATE TRIGGER update_user_vocab_progress_updated_at
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
-  INSERT INTO public.users (id, username, xp, level, streak)
+  INSERT INTO public.users (id, username, display_name, xp, level, streak)
   VALUES (
     NEW.id,
     COALESCE(NEW.raw_user_meta_data->>'username', split_part(NEW.email, '@', 1)),
+    COALESCE(
+      NEW.raw_user_meta_data->>'display_name',
+      NEW.raw_user_meta_data->>'username',
+      split_part(NEW.email, '@', 1)
+    ),
     0,
     1,
     0

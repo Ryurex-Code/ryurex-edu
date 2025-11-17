@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Clock, CheckCircle2, XCircle, Lightbulb, ArrowLeft } from 'lucide-react';
+import { Clock, CheckCircle2, XCircle, Lightbulb, ArrowLeft, RotateCcw, ChevronRight, Home } from 'lucide-react';
 import ThemeToggle from '@/components/ThemeToggle';
 import { useTheme } from '@/context/ThemeContext';
 
@@ -41,6 +41,22 @@ export default function VocabGameContent() {
   const [isLoading, setIsLoading] = useState(true);
   const [showResultModal, setShowResultModal] = useState(false);
   const [isSubmittingResults, setIsSubmittingResults] = useState(false);
+  const [hasNextPart, setHasNextPart] = useState(false);
+
+  // Reset all game state when category or subcategory changes
+  useEffect(() => {
+    setWords([]);
+    setCurrentIndex(0);
+    setUserAnswer('');
+    setTimer(0);
+    setShowHint(false);
+    setFeedback(null);
+    setIsSubmitting(false);
+    setGameResults([]);
+    setIsLoading(true);
+    setShowResultModal(false);
+    setIsSubmittingResults(false);
+  }, [category, subcategory]);
 
   // Timer interval
   useEffect(() => {
@@ -55,15 +71,30 @@ export default function VocabGameContent() {
 
   // Show hint after 10 seconds
   useEffect(() => {
-    if (timer >= 10 && !showHint && !feedback) {
+    if (timer >= 10 && !feedback) {
       setShowHint(true);
-      // Auto-fill first letter when hint appears
+      // Auto-fill revealed letters when hint appears
       const currentWord = words[currentIndex];
-      if (currentWord && userAnswer.length === 0) {
-        setUserAnswer(currentWord.english[0]);
+      if (currentWord) {
+        const revealedLetters = Math.floor(timer / 10);
+        // Build the correct answer with revealed letters
+        let filledAnswer = '';
+        for (let i = 0; i < currentWord.english.length; i++) {
+          if (i < revealedLetters) {
+            filledAnswer += currentWord.english[i];
+          } else if (userAnswer[i]) {
+            filledAnswer += userAnswer[i];
+          } else {
+            break; // Stop if we hit an empty position
+          }
+        }
+        // Only update if we have revealed letters
+        if (revealedLetters > 0) {
+          setUserAnswer(filledAnswer);
+        }
       }
     }
-  }, [timer, showHint, feedback, words, currentIndex, userAnswer]);
+  }, [timer, feedback, words, currentIndex, userAnswer]);
 
   // Fetch words on mount - REQUIRED category and subcategory
   useEffect(() => {
@@ -219,7 +250,25 @@ export default function VocabGameContent() {
       const data = await response.json();
       console.log('✅ Batch submission success:', data);
       
-      // Show result modal after successful submission
+      // Check if next part exists before showing modal
+      try {
+        const nextSubcategory = parseInt(String(subcategory)) + 1;
+        const checkResponse = await fetch(`/api/subcategories?category=${encodeURIComponent(category || '')}`);
+        
+        if (checkResponse.ok) {
+          const checkData = await checkResponse.json();
+          const nextPartExists = checkData.subcategories?.some(
+            (sub: { subcategory: number; word_count: number }) => sub.subcategory === nextSubcategory && sub.word_count > 0
+          );
+          setHasNextPart(!!nextPartExists);
+          console.log('Next part exists:', nextPartExists);
+        }
+      } catch (error) {
+        console.error('Error checking next part:', error);
+        setHasNextPart(false);
+      }
+      
+      // Show result modal after checking is complete
       setShowResultModal(true);
     } catch (error) {
       console.error('❌ Error submitting batch results:', error);
@@ -244,6 +293,7 @@ export default function VocabGameContent() {
     if (!currentWord) return;
     
     const correctAnswer = currentWord.english;
+    const revealedLetters = showHint ? Math.floor(timer / 10) : 0;
     
     // Prevent manual space input (spaces are auto-added by system)
     if (newValue.endsWith(' ') && !correctAnswer[newValue.length - 1]) {
@@ -251,18 +301,22 @@ export default function VocabGameContent() {
       return;
     }
     
-    // If hint is shown, ensure first letter cannot be deleted
-    if (showHint) {
-      const firstLetter = correctAnswer[0];
-      // User trying to delete/change first letter - prevent it
-      if (newValue.length === 0 || newValue[0] !== firstLetter) {
-        setUserAnswer(firstLetter + newValue.slice(1));
-        return;
+    // If hint is shown, prevent changing revealed letters
+    if (showHint && revealedLetters > 0) {
+      // Check if user tried to modify any revealed letters
+      for (let i = 0; i < revealedLetters; i++) {
+        if (correctAnswer[i] !== ' ' && newValue[i] !== correctAnswer[i]) {
+          // Restore the revealed letter
+          const corrected = correctAnswer.slice(0, revealedLetters) + newValue.slice(revealedLetters);
+          setUserAnswer(corrected.slice(0, correctAnswer.length));
+          return;
+        }
       }
     }
     
     // Auto-skip spaces: if next character in correct answer is space, add it automatically
-    if (newValue.length < correctAnswer.length && correctAnswer[newValue.length] === ' ') {
+    // BUT: Only do this when user is TYPING forward (length increasing), not when deleting
+    if (newValue.length < correctAnswer.length && correctAnswer[newValue.length] === ' ' && userAnswer.length < newValue.length) {
       newValue = newValue + ' ';
     }
     
@@ -294,6 +348,9 @@ export default function VocabGameContent() {
     
     const correctAnswer = words[currentIndex].english;
     const letters = correctAnswer.split('');
+    
+    // Calculate how many letters to reveal based on timer (every 10 seconds)
+    const revealedLetters = showHint ? Math.floor(timer / 10) : 0;
 
     return letters.map((letter, idx) => {
       // Preserve spaces between words
@@ -301,17 +358,17 @@ export default function VocabGameContent() {
         return <span key={idx} className="inline-block w-4"></span>;
       }
       
-      // Show hint for first letter after 10s (yellow color from userAnswer)
-      if (showHint && idx === 0 && userAnswer[0]) {
+      // Show CORRECT letters in yellow for revealed positions (always show correct answer for hints)
+      if (revealedLetters > idx && showHint) {
         return (
-          <span key={idx} className="text-[#fee801] font-bold mx-1">
-            {userAnswer[0]}
+          <span key={idx} className="text-primary-yellow font-bold mx-1">
+            {correctAnswer[idx]}
           </span>
         );
       }
       
-      // Show user's typed input
-      if (userAnswer[idx]) {
+      // Show user's typed input (for non-revealed positions)
+      if (userAnswer[idx] && !(revealedLetters > idx && showHint)) {
         return (
           <span key={idx} className="text-text-primary mx-1">
             {userAnswer[idx]}
@@ -332,7 +389,13 @@ export default function VocabGameContent() {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <div className="w-16 h-16 border-4 border-[#fee801] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <div className="flex justify-center mb-4">
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+              className="spinner-loading"
+            />
+          </div>
           <p className="text-text-secondary">Loading vocabulary...</p>
         </div>
       </div>
@@ -350,7 +413,7 @@ export default function VocabGameContent() {
           </p>
           <button
             onClick={() => router.push(`/category-menu/${category}`)}
-            className="px-6 py-3 bg-[#fee801] text-black rounded-lg font-semibold hover:scale-105 transition-transform"
+            className="px-6 py-3 bg-primary-yellow text-black rounded-lg font-semibold hover:scale-105 transition-transform cursor-pointer"
           >
             Back to Menu
           </button>
@@ -371,33 +434,35 @@ export default function VocabGameContent() {
       {/* Header */}
       <div className="border-b border-text-secondary/10">
         <div className="max-w-4xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between mb-2">
-            <button
-              onClick={() => router.push(`/category-menu/${category}`)}
-              className="flex items-center gap-2 text-text-secondary hover:text-[#fee801] transition-colors"
-            >
-              <ArrowLeft className="w-5 h-5" />
-              <span>Back</span>
-            </button>
-
-            {/* Progress */}
-            <div className="text-text-secondary">
-              Question <span className="text-[#fee801] font-bold">{currentIndex + 1}</span> / {words.length}
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex-1">
+              <button
+                onClick={() => router.push(`/category-menu/${category}`)}
+                className="flex items-center gap-2 text-text-secondary hover:text-primary-yellow transition-colors cursor-pointer"
+              >
+                <ArrowLeft className="w-5 h-5" />
+                <span>Back</span>
+              </button>
             </div>
 
-            {/* Timer */}
-            <div className="flex items-center gap-2 text-text-secondary">
+            {/* Progress - Center */}
+            <div className="flex-1 text-center text-text-secondary">
+              Question <span className="text-primary-yellow font-bold">{currentIndex + 1}</span> / {words.length}
+            </div>
+
+            {/* Timer - Right */}
+            <div className="flex-1 flex items-center justify-end gap-2 text-text-secondary">
               <Clock className="w-5 h-5" />
               <span className="font-mono">{timer}s</span>
             </div>
           </div>
 
           {/* Category & Subcategory Badges */}
-          <div className="text-center flex items-center justify-center gap-2">
-            <span className="inline-block px-4 py-1 bg-[#7c5cff] text-white text-sm font-semibold rounded-full capitalize">
+          <div className="flex items-center justify-center gap-2">
+            <span className="inline-block px-4 py-1 bg-secondary-purple text-white text-sm font-semibold rounded-full capitalize">
               {category}
             </span>
-            <span className="inline-block px-4 py-1 bg-[#fee801] text-black text-sm font-semibold rounded-full">
+            <span className="inline-block px-4 py-1 bg-primary-yellow text-black text-sm font-semibold rounded-full">
               Part {subcategory}
             </span>
           </div>
@@ -408,7 +473,7 @@ export default function VocabGameContent() {
       <div className="max-w-4xl mx-auto px-4 mt-4">
         <div className="h-2 bg-surface rounded-full overflow-hidden">
           <motion.div
-            className="h-full bg-[#fee801]"
+            className="h-full bg-primary-yellow"
             initial={{ width: 0 }}
             animate={{ width: `${((currentIndex + 1) / words.length) * 100}%` }}
             transition={{ duration: 0.3 }}
@@ -433,11 +498,11 @@ export default function VocabGameContent() {
               <h1 className="text-5xl font-bold text-text-primary mb-2">{currentWord.indo}</h1>
               <div className="flex items-center justify-center gap-2">
                 {currentWord.class && (
-                  <span className="inline-block px-3 py-1 bg-[#fee801] text-black text-xs font-semibold rounded-full">
+                  <span className="inline-block px-3 py-1 bg-primary-yellow text-black text-xs font-semibold rounded-full">
                     {currentWord.class}
                   </span>
                 )}
-                <span className="inline-block px-3 py-1 bg-[#7c5cff] text-white text-xs rounded-full">
+                <span className="inline-block px-3 py-1 bg-secondary-purple text-white text-xs rounded-full">
                   {currentWord.category}
                 </span>
               </div>
@@ -461,7 +526,7 @@ export default function VocabGameContent() {
                 
                 {/* Visual underscore display */}
                 <div 
-                  className="bg-surface px-8 py-6 rounded-xl border-2 border-text-secondary/20 hover:border-[#fee801]/50 transition-colors cursor-text"
+                  className="bg-surface px-8 py-6 rounded-xl border-2 border-text-secondary/20 hover:border-primary-yellow/50 transition-colors cursor-text"
                   onClick={() => {
                     const input = document.querySelector('input[type="text"]') as HTMLInputElement;
                     if (input) input.focus();
@@ -479,7 +544,7 @@ export default function VocabGameContent() {
               <motion.div
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="flex items-center justify-center gap-2 text-[#fee801]"
+                className="flex items-center justify-center gap-2 text-primary-yellow"
               >
                 <Lightbulb className="w-5 h-5" />
                 <span className="text-sm">Hint: First letter revealed!</span>
@@ -496,7 +561,7 @@ export default function VocabGameContent() {
                   isSubmitting || 
                   !!feedback
                 }
-                className="px-12 py-4 bg-[#fee801] text-black rounded-xl font-bold text-lg hover:scale-105 disabled:opacity-50 disabled:hover:scale-100 transition-transform"
+                className="px-12 py-4 bg-primary-yellow text-black rounded-xl font-bold text-lg hover:scale-105 disabled:opacity-50 disabled:hover:scale-100 transition-transform cursor-pointer"
               >
                 {isSubmitting ? 'Checking...' : 'Submit'}
               </button>
@@ -543,7 +608,7 @@ export default function VocabGameContent() {
           <motion.div
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="bg-[#1a1b1e] border-2 border-[#fee801] rounded-3xl p-8 max-w-md w-full shadow-2xl"
+            className="bg-card-darker border-2 border-primary-yellow rounded-3xl p-8 max-w-md w-full shadow-2xl"
           >
             <div className="text-center space-y-6">
               {/* Spinner */}
@@ -551,7 +616,7 @@ export default function VocabGameContent() {
                 <motion.div
                   animate={{ rotate: 360 }}
                   transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                  className="w-16 h-16 border-4 border-[#fee801] border-t-transparent rounded-full"
+                  className="spinner-loading"
                 />
               </div>
 
@@ -574,13 +639,24 @@ export default function VocabGameContent() {
         <ResultModal
           results={gameResults}
           category={category || ''}
+          subcategory={subcategory || ''}
+          hasNextPart={hasNextPart}
           onClose={() => router.push('/dashboard')}
           onPlayAgain={() => {
             setShowResultModal(false);
+            setIsLoading(true);
             setCurrentIndex(0);
             setGameResults([]);
+            setHasNextPart(false);
             resetQuestion();
             fetchWords();
+          }}
+          onNextPart={(nextSubcategory) => {
+            setShowResultModal(false);
+            setIsLoading(true);
+            // Use window.location for full page reload (same as manual click)
+            const url = `/vocabgame?category=${encodeURIComponent(category || '')}&subcategory=${nextSubcategory}`;
+            window.location.href = url;
           }}
         />
       )}
@@ -592,17 +668,24 @@ export default function VocabGameContent() {
 function ResultModal({
   results,
   category,
+  subcategory,
+  hasNextPart,
   onClose,
   onPlayAgain,
+  onNextPart,
 }: {
   results: GameResult[];
   words?: VocabWord[];
   category: string;
+  subcategory: string | number;
+  hasNextPart: boolean;
   onClose: () => void;
   onPlayAgain: () => void;
+  onNextPart: (nextSubcategory: number) => void;
 }) {
-  const router = useRouter();
+  const _router = useRouter();
   const { theme } = useTheme();
+
   const correctCount = results.filter((r) => r.correct).length;
   const accuracy = ((correctCount / results.length) * 100).toFixed(0);
   const avgTime = (results.reduce((sum, r) => sum + r.time_taken, 0) / results.length).toFixed(1);
@@ -613,13 +696,16 @@ function ResultModal({
     return sum + (r.time_taken < 10 ? 10 : 5); // Fast: 10 XP, Slow: 5 XP
   }, 0);
 
+  const handleNextPart = () => {
+    const nextSubcategory = parseInt(String(subcategory)) + 1;
+    onNextPart(nextSubcategory);
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className={`fixed inset-0 flex items-center justify-center p-4 z-50 ${
-        theme === 'dark' ? 'bg-[#0a0b0e]' : 'bg-white'
-      }`}
+      className={`fixed inset-0 flex items-center justify-center p-4 z-50 bg-black/50`}
       onClick={onClose}
     >
       <motion.div
@@ -627,17 +713,15 @@ function ResultModal({
         animate={{ scale: 1, opacity: 1 }}
         transition={{ delay: 0.1 }}
         onClick={(e) => e.stopPropagation()}
-        className={`border-2 border-[#fee801] rounded-3xl p-8 max-w-md w-full shadow-2xl ${
-          theme === 'dark' ? 'bg-[#1a1b1e]' : 'bg-white'
-        }`}
+        className="border-2 border-primary-yellow rounded-3xl p-8 max-w-md w-full shadow-2xl bg-card-darker"
       >
         <div className="text-center space-y-6">
           {/* Title */}
           <div className="space-y-2">
-            <h2 className={`text-3xl font-bold ${theme === 'dark' ? 'text-white' : 'text-black'}`}>
+            <h2 className="text-3xl font-bold text-white">
               Session Complete!
             </h2>
-            <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+            <p className="text-gray-400">
               Great job on finishing {results.length} questions
             </p>
           </div>
@@ -645,36 +729,28 @@ function ResultModal({
           {/* Stats */}
           <div className="space-y-4">
             {/* XP Gained - Large Card */}
-            <div className="bg-[#fee801] rounded-2xl p-6">
+            <div className="bg-primary-yellow rounded-2xl p-6">
               <p className="text-black/70 text-sm font-semibold">Total XP Gained</p>
               <p className="text-5xl font-bold text-black">+{xpGained}</p>
             </div>
 
             {/* Accuracy & Time Grid */}
             <div className="grid grid-cols-2 gap-4">
-              <div className={`rounded-xl p-4 ${
-                theme === 'dark' 
-                  ? 'bg-[#2a2b2e] border border-gray-700' 
-                  : 'bg-gray-50 border border-gray-200'
-              }`}>
-                <p className={`text-xs mb-1 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+              <div className="rounded-xl p-4 bg-card-darker border border-gray-700">
+                <p className="text-xs mb-1 text-gray-400">
                   Accuracy
                 </p>
-                <p className={`text-3xl font-bold ${theme === 'dark' ? 'text-white' : 'text-black'}`}>
+                <p className="text-3xl font-bold text-white">
                   {accuracy}%
                 </p>
                 <p className="text-gray-500 text-xs mt-1">{correctCount}/{results.length} correct</p>
               </div>
 
-              <div className={`rounded-xl p-4 ${
-                theme === 'dark' 
-                  ? 'bg-[#2a2b2e] border border-gray-700' 
-                  : 'bg-gray-50 border border-gray-200'
-              }`}>
-                <p className={`text-xs mb-1 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+              <div className="rounded-xl p-4 bg-card-darker border border-gray-700">
+                <p className="text-xs mb-1 text-gray-400">
                   Avg Time
                 </p>
-                <p className={`text-3xl font-bold ${theme === 'dark' ? 'text-white' : 'text-black'}`}>
+                <p className="text-3xl font-bold text-white">
                   {avgTime}s
                 </p>
                 <p className="text-gray-500 text-xs mt-1">per question</p>
@@ -682,23 +758,42 @@ function ResultModal({
             </div>
           </div>
 
-          {/* Buttons */}
-          <div className="flex gap-3 pt-2">
+          {/* Buttons - Icon Only */}
+          <div className="flex items-center justify-center gap-4 pt-2">
+            {/* Play Again */}
             <button
               onClick={onPlayAgain}
-              className="flex-1 px-6 py-4 bg-[#fee801] text-black rounded-xl font-bold text-lg hover:bg-[#fef030] transition-colors shadow-lg"
+              title="Play Again"
+              className="p-4 bg-primary-yellow text-black rounded-full hover:bg-primary-yellow-hover hover:scale-110 transition-all shadow-lg cursor-pointer"
             >
-              Play Again
+              <RotateCcw className="w-6 h-6" />
             </button>
+
+            {/* Next Part */}
             <button
-              onClick={() => router.push(`/category-menu/${category}`)}
-              className={`flex-1 px-6 py-4 rounded-xl font-bold text-lg border-2 transition-colors hover:border-[#fee801] ${
-                theme === 'dark'
-                  ? 'bg-[#2a2b2e] border-gray-700 text-white'
-                  : 'bg-gray-100 border-gray-300 text-black'
+              onClick={() => {
+                if (hasNextPart) {
+                  handleNextPart();
+                }
+              }}
+              disabled={!hasNextPart}
+              title={hasNextPart ? "Next Part" : "No more parts available"}
+              className={`p-4 rounded-full border-2 transition-all shadow-lg ${
+                hasNextPart
+                  ? 'cursor-pointer hover:scale-110 bg-card border-primary-yellow text-primary-yellow hover:bg-primary-yellow/10'
+                  : 'cursor-not-allowed opacity-50 bg-card border-gray-600 text-gray-600'
               }`}
             >
-              Menu
+              <ChevronRight className="w-6 h-6" />
+            </button>
+
+            {/* Back to Menu */}
+            <button
+              onClick={onClose}
+              title="Back to Menu"
+              className="p-4 rounded-full border-2 border-gray-600 text-gray-400 hover:border-gray-400 hover:text-gray-300 transition-all hover:scale-110 shadow-lg cursor-pointer bg-card"
+            >
+              <Home className="w-6 h-6" />
             </button>
           </div>
         </div>

@@ -3,23 +3,35 @@
 :root {
   --background: #0f1115;
   --foreground: #ededed;
-  --primary-yellow: #fee801;
+  --primary-yellow: #FEE801;
+  --primary-yellow-hover: #fef030;
+  --primary-yellow-light: rgba(254, 232, 1, 0.1);
+  --primary-yellow-light-hover: rgba(254, 232, 1, 0.2);
   --secondary-purple: #7c5cff;
+  --secondary-purple-light: rgba(124, 92, 255, 0.2);
   --card-bg: #1a1d24;
   --border-color: rgba(254, 232, 1, 0.2);
   --input-bg: #0f1115;
   --input-border: #4a4a4a;
+  --card-bg-dark: #1a1b1e;
+  --card-bg-darker: #2a2b2e;
 }
 
 :root.light {
   --background: #ffffff;
   --foreground: #1a1a1a;
   --primary-yellow: #f5c400;
+  --primary-yellow-hover: #ffd700;
+  --primary-yellow-light: rgba(245, 196, 0, 0.1);
+  --primary-yellow-light-hover: rgba(245, 196, 0, 0.2);
   --secondary-purple: #6b4de6;
+  --secondary-purple-light: rgba(107, 77, 230, 0.2);
   --card-bg: #f8f9fa;
   --border-color: rgba(245, 196, 0, 0.3);
   --input-bg: #ffffff;
   --input-border: #d1d5db;
+  --card-bg-dark: #f0f0f0;
+  --card-bg-darker: #e8e8e8;
 }
 
 body {
@@ -51,5 +63,69 @@ body {
 
   .border-input {
     border-color: var(--input-border);
+  }
+
+  /* Primary Yellow Utilities */
+  .bg-primary-yellow {
+    background-color: var(--primary-yellow);
+  }
+
+  .text-primary-yellow {
+    color: var(--primary-yellow);
+  }
+
+  .hover\:text-primary-yellow:hover {
+    color: var(--primary-yellow);
+  }
+
+  .border-primary-yellow {
+    border-color: var(--primary-yellow);
+  }
+
+  .bg-primary-yellow-light {
+    background-color: var(--primary-yellow-light);
+  }
+
+  .hover\:bg-primary-yellow-light-hover:hover {
+    background-color: var(--primary-yellow-light-hover);
+  }
+
+  .hover\:bg-primary-yellow-hover:hover {
+    background-color: var(--primary-yellow-hover);
+  }
+
+  /* Secondary Purple Utilities */
+  .bg-secondary-purple {
+    background-color: var(--secondary-purple);
+  }
+
+  .text-secondary-purple {
+    color: var(--secondary-purple);
+  }
+
+  .border-secondary-purple {
+    border-color: var(--secondary-purple);
+  }
+
+  .bg-secondary-purple-light {
+    background-color: var(--secondary-purple-light);
+  }
+
+  /* Card variations */
+  .bg-card-dark {
+    background-color: var(--card-bg-dark);
+  }
+
+  .bg-card-darker {
+    background-color: var(--card-bg-darker);
+  }
+
+  /* Loading Spinner */
+  .spinner-loading {
+    width: 64px;
+    height: 64px;
+    border: 4px solid var(--primary-yellow);
+    border-top-color: transparent;
+    border-radius: 50%;
   }
 }

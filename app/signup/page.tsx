@@ -5,11 +5,12 @@ import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { Mail, Lock, Sparkles, UserPlus } from 'lucide-react';
+import { Mail, Lock, Sparkles, UserPlus, User } from 'lucide-react';
 import ThemeToggle from '@/components/ThemeToggle';
 
 export default function SignUpPage() {
   const [email, setEmail] = useState('');
+  const [displayName, setDisplayName] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -26,6 +27,13 @@ export default function SignUpPage() {
     setMessage(null);
 
     // Validation
+    const trimmedDisplayName = displayName.trim();
+    if (trimmedDisplayName.length === 0 || trimmedDisplayName.length > 50) {
+      setError('Display name must be between 1 and 50 characters');
+      setLoading(false);
+      return;
+    }
+
     if (password !== confirmPassword) {
       setError('Passwords do not match');
       setLoading(false);
@@ -44,6 +52,9 @@ export default function SignUpPage() {
         password,
         options: {
           emailRedirectTo: `${location.origin}/auth/callback`,
+          data: {
+            display_name: trimmedDisplayName,
+          },
         },
       });
 
@@ -66,6 +77,7 @@ export default function SignUpPage() {
 
       setMessage('Success! Check your email to confirm your account.');
       setEmail('');
+      setDisplayName('');
       setPassword('');
       setConfirmPassword('');
       
@@ -107,7 +119,7 @@ export default function SignUpPage() {
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ delay: 0.2, type: 'spring' }}
-              className="inline-flex items-center justify-center w-16 h-16 bg-[#fee801] border-2 border-[#fee801] rounded-2xl mb-4"
+              className="inline-flex items-center justify-center w-16 h-16 bg-primary-yellow border-2 border-primary-yellow rounded-2xl mb-4"
             >
               <UserPlus className="w-8 h-8 text-black" />
             </motion.div>
@@ -132,7 +144,7 @@ export default function SignUpPage() {
             <motion.div
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
-              className="mb-4 p-4 bg-[#fee801]/10 border border-[#fee801]/20 rounded-lg text-[#fee801] text-sm"
+              className="mb-4 p-4 bg-primary-yellow/10 border border-primary-yellow/20 rounded-lg text-primary-yellow text-sm"
             >
               {message}
             </motion.div>
@@ -157,6 +169,29 @@ export default function SignUpPage() {
                   placeholder="your@email.com"
                 />
               </div>
+            </div>
+
+            {/* Display Name */}
+            <div>
+              <label htmlFor="displayName" className="block text-sm font-medium text-foreground mb-2">
+                Display Name
+              </label>
+              <div className="relative">
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                <input
+                  id="displayName"
+                  type="text"
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  required
+                  maxLength={50}
+                  className="w-full pl-11 pr-4 py-3 bg-input border border-input rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all text-foreground placeholder-muted-foreground"
+                  placeholder="How should we call you?"
+                />
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">
+                1-50 characters (visible on leaderboard)
+              </p>
             </div>
 
             {/* Password */}
@@ -205,7 +240,7 @@ export default function SignUpPage() {
               whileTap={{ scale: 0.98 }}
               type="submit"
               disabled={loading}
-              className="w-full py-3 bg-gradient-to-r from-[#fee801] to-[#ffd700] text-[#0f1115] rounded-lg font-semibold hover:shadow-lg hover:shadow-[#fee801]/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full py-3 bg-gradient-to-r from-primary-yellow to-primary-yellow-hover text-background rounded-lg font-semibold hover:shadow-lg hover:shadow-primary-yellow/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? 'Creating Account...' : 'Sign Up'}
             </motion.button>
@@ -214,7 +249,7 @@ export default function SignUpPage() {
           {/* Footer */}
           <div className="mt-6 text-center text-sm text-muted-foreground">
             Already have an account?{' '}
-            <Link href="/login" className="text-[#fee801] hover:text-[#ffd700] hover:underline font-semibold transition-colors">
+            <Link href="/login" className="text-primary-yellow hover:text-primary-yellow-hover hover:underline font-semibold transition-colors">
               Log In
             </Link>
           </div>

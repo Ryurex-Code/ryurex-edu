@@ -61,6 +61,7 @@ export async function GET() {
         xp: userData.xp,
         level: userData.level,
         streak: userData.streak,
+        display_name: userData.display_name,
         last_activity_date: userData.last_activity_date,
         created_at: userData.created_at,
       },

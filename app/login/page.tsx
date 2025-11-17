@@ -91,7 +91,7 @@ export default function LoginPage() {
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ delay: 0.2, type: 'spring' }}
-              className="inline-flex items-center justify-center w-16 h-16 bg-[#fee801] border-2 border-[#fee801] rounded-2xl mb-4"
+              className="inline-flex items-center justify-center w-16 h-16 bg-[#E2B714] border-2 border-[#E2B714] rounded-2xl mb-4"
             >
               <LogIn className="w-8 h-8 text-black" />
             </motion.div>
@@ -116,7 +116,7 @@ export default function LoginPage() {
             <motion.div
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
-              className="mb-4 p-4 bg-[#fee801]/10 border border-[#fee801]/20 rounded-lg text-[#fee801] text-sm"
+              className="mb-4 p-4 bg-[#E2B714]/10 border border-[#E2B714]/20 rounded-lg text-[#E2B714] text-sm"
             >
               {message}
             </motion.div>
@@ -149,7 +149,7 @@ export default function LoginPage() {
                 <label htmlFor="password" className="block text-sm font-medium text-foreground">
                   Password
                 </label>
-                <Link href="/forgot-password" className="text-xs text-[#fee801] hover:text-[#ffd700] hover:underline transition-colors">
+                <Link href="/forgot-password" className="text-xs text-[#E2B714] hover:text-[#D4AF37] hover:underline transition-colors">
                   Forgot Password?
                 </Link>
               </div>
@@ -173,7 +173,7 @@ export default function LoginPage() {
               whileTap={{ scale: 0.98 }}
               type="submit"
               disabled={loading}
-              className="w-full py-3 bg-gradient-to-r from-[#fee801] to-[#ffd700] text-[#0f1115] rounded-lg font-semibold hover:shadow-lg hover:shadow-[#fee801]/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full py-3 bg-gradient-to-r from-[#E2B714] to-[#D4AF37] text-[#0f1115] rounded-lg font-semibold hover:shadow-lg hover:shadow-[#E2B714]/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? 'Logging in...' : 'Log In'}
             </motion.button>
@@ -204,7 +204,7 @@ export default function LoginPage() {
           {/* Footer */}
           <div className="mt-6 text-center text-sm text-muted-foreground">
             Don&apos;t have an account?{' '}
-            <Link href="/signup" className="text-[#fee801] hover:text-[#ffd700] hover:underline font-semibold transition-colors">
+            <Link href="/signup" className="text-[#E2B714] hover:text-[#D4AF37] hover:underline font-semibold transition-colors">
               Sign Up
             </Link>
           </div>

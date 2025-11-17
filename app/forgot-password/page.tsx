@@ -21,8 +21,9 @@ export default function ForgotPasswordPage() {
     setError(null);
 
     try {
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${location.origin}/auth/callback?next=/update-password`,
+        redirectTo: `${baseUrl}/auth/callback?next=/update-password`,
       });
 
       if (error) throw error;
@@ -105,7 +106,7 @@ export default function ForgotPasswordPage() {
                   setSuccess(false);
                   setEmail('');
                 }}
-                className="text-[#fee801] hover:text-[#ffd700] text-sm font-semibold transition-colors"
+                className="text-[#fee801] hover:text-[#D4AF37] text-sm font-semibold transition-colors"
               >
                 Try another email
               </button>
@@ -150,7 +151,7 @@ export default function ForgotPasswordPage() {
                   whileTap={{ scale: 0.98 }}
                   type="submit"
                   disabled={loading}
-                  className="w-full py-3 bg-gradient-to-r from-[#7c5cff] to-[#9575ff] text-white rounded-lg font-semibold hover:shadow-lg hover:shadow-[#7c5cff]/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full py-3 bg-gradient-to-r from-[#7c5cff] to-[#9575ff] text-white rounded-lg font-semibold hover:shadow-lg hover:shadow-[#7c5cff]/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                 >
                   {loading ? 'Sending...' : 'Send Reset Link'}
                 </motion.button>
@@ -160,7 +161,7 @@ export default function ForgotPasswordPage() {
               <div className="mt-6 text-center">
                 <p className="text-sm text-muted-foreground">
                   Remember your password?{' '}
-                  <Link href="/login" className="text-[#fee801] hover:text-[#ffd700] hover:underline font-semibold transition-colors">
+                  <Link href="/login" className="text-[#fee801] hover:text-[#D4AF37] hover:underline font-semibold transition-colors">
                     Log In
                   </Link>
                 </p>

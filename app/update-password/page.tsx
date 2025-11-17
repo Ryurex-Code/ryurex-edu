@@ -105,7 +105,7 @@ export default function UpdatePasswordPage() {
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ delay: 0.2, type: 'spring' }}
-              className="inline-flex items-center justify-center w-16 h-16 bg-[#7c5cff] border-2 border-[#7c5cff] rounded-2xl mb-4"
+              className="inline-flex items-center justify-center w-16 h-16 bg-secondary-purple border-2 border-secondary-purple rounded-2xl mb-4"
             >
               <Lock className="w-8 h-8 text-white" />
             </motion.div>
@@ -150,7 +150,7 @@ export default function UpdatePasswordPage() {
               </p>
               <button
                 onClick={() => router.push('/forgot-password')}
-                className="px-6 py-3 bg-gradient-to-r from-[#7c5cff] to-[#9575ff] text-white rounded-lg font-semibold hover:shadow-lg hover:shadow-[#7c5cff]/20 transition-all"
+                className="px-6 py-3 bg-gradient-to-r from-secondary-purple to-secondary-purple text-white rounded-lg font-semibold hover:shadow-lg hover:shadow-secondary-purple/20 transition-all"
               >
                 Request New Link
               </button>
@@ -216,7 +216,7 @@ export default function UpdatePasswordPage() {
                   whileTap={{ scale: 0.98 }}
                   type="submit"
                   disabled={loading}
-                  className="w-full py-3 bg-gradient-to-r from-[#fee801] to-[#ffd700] text-black rounded-lg font-semibold hover:shadow-lg hover:shadow-[#fee801]/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full py-3 bg-gradient-to-r from-[#E2B714] to-[#D4AF37] text-[#0f1115] rounded-lg font-semibold hover:shadow-lg hover:shadow-[#E2B714]/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                 >
                   {loading ? 'Updating Password...' : 'Update Password'}
                 </motion.button>

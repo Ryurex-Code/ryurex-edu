@@ -52,15 +52,30 @@ export default function VocabPage() {
 
   // Show hint after 10 seconds
   useEffect(() => {
-    if (timer >= 10 && !showHint && !feedback) {
+    if (timer >= 10 && !feedback) {
       setShowHint(true);
-      // Auto-fill first letter when hint appears
+      // Auto-fill revealed letters when hint appears
       const currentWord = words[currentIndex];
-      if (currentWord && userAnswer.length === 0) {
-        setUserAnswer(currentWord.english[0]);
+      if (currentWord) {
+        const revealedLetters = Math.floor(timer / 10);
+        // Build the correct answer with revealed letters
+        let filledAnswer = '';
+        for (let i = 0; i < currentWord.english.length; i++) {
+          if (i < revealedLetters) {
+            filledAnswer += currentWord.english[i];
+          } else if (userAnswer[i]) {
+            filledAnswer += userAnswer[i];
+          } else {
+            break; // Stop if we hit an empty position
+          }
+        }
+        // Only update if we have revealed letters
+        if (revealedLetters > 0) {
+          setUserAnswer(filledAnswer);
+        }
       }
     }
-  }, [timer, showHint, feedback, words, currentIndex, userAnswer]);
+  }, [timer, feedback, words, currentIndex, userAnswer]);
 
   // Fetch words on mount
   useEffect(() => {
@@ -221,6 +236,7 @@ export default function VocabPage() {
     if (!currentWord) return;
     
     const correctAnswer = currentWord.english;
+    const revealedLetters = showHint ? Math.floor(timer / 10) : 0;
     
     // Prevent manual space input (spaces are auto-added by system)
     if (newValue.endsWith(' ') && !correctAnswer[newValue.length - 1]) {
@@ -228,18 +244,22 @@ export default function VocabPage() {
       return;
     }
     
-    // If hint is shown, ensure first letter cannot be deleted
-    if (showHint) {
-      const firstLetter = correctAnswer[0];
-      // User trying to delete/change first letter - prevent it
-      if (newValue.length === 0 || newValue[0] !== firstLetter) {
-        setUserAnswer(firstLetter + newValue.slice(1));
-        return;
+    // If hint is shown, prevent changing revealed letters
+    if (showHint && revealedLetters > 0) {
+      // Check if user tried to modify any revealed letters
+      for (let i = 0; i < revealedLetters; i++) {
+        if (correctAnswer[i] !== ' ' && newValue[i] !== correctAnswer[i]) {
+          // Restore the revealed letter
+          const corrected = correctAnswer.slice(0, revealedLetters) + newValue.slice(revealedLetters);
+          setUserAnswer(corrected.slice(0, correctAnswer.length));
+          return;
+        }
       }
     }
     
     // Auto-skip spaces: if next character in correct answer is space, add it automatically
-    if (newValue.length < correctAnswer.length && correctAnswer[newValue.length] === ' ') {
+    // BUT: Only do this when user is TYPING forward (length increasing), not when deleting
+    if (newValue.length < correctAnswer.length && correctAnswer[newValue.length] === ' ' && userAnswer.length < newValue.length) {
       newValue = newValue + ' ';
     }
     
@@ -271,6 +291,9 @@ export default function VocabPage() {
     
     const correctAnswer = words[currentIndex].english;
     const letters = correctAnswer.split('');
+    
+    // Calculate how many letters to reveal based on timer (every 10 seconds)
+    const revealedLetters = showHint ? Math.floor(timer / 10) : 0;
 
     return letters.map((letter, idx) => {
       // Preserve spaces between words
@@ -278,17 +301,17 @@ export default function VocabPage() {
         return <span key={idx} className="inline-block w-4"></span>;
       }
       
-      // Show hint for first letter after 10s (yellow color from userAnswer)
-      if (showHint && idx === 0 && userAnswer[0]) {
+      // Show CORRECT letters in yellow for revealed positions (always show correct answer for hints)
+      if (revealedLetters > idx && showHint) {
         return (
-          <span key={idx} className="text-[#fee801] font-bold mx-1">
-            {userAnswer[0]}
+          <span key={idx} className="text-primary-yellow font-bold mx-1">
+            {correctAnswer[idx]}
           </span>
         );
       }
       
-      // Show user's typed input
-      if (userAnswer[idx]) {
+      // Show user's typed input (for non-revealed positions)
+      if (userAnswer[idx] && !(revealedLetters > idx && showHint)) {
         return (
           <span key={idx} className="text-text-primary mx-1">
             {userAnswer[idx]}
@@ -309,7 +332,13 @@ export default function VocabPage() {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <div className="w-16 h-16 border-4 border-[#fee801] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <div className="flex justify-center mb-4">
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+              className="spinner-loading"
+            />
+          </div>
           <p className="text-text-secondary">Loading vocabulary...</p>
         </div>
       </div>
@@ -327,7 +356,7 @@ export default function VocabPage() {
           </p>
           <button
             onClick={() => router.push('/dashboard')}
-            className="px-6 py-3 bg-[#fee801] text-black rounded-lg font-semibold hover:scale-105 transition-transform"
+            className="px-6 py-3 bg-primary-yellow text-black rounded-lg font-semibold hover:scale-105 transition-transform cursor-pointer"
           >
             Back to Dashboard
           </button>
@@ -348,22 +377,24 @@ export default function VocabPage() {
       {/* Header */}
       <div className="border-b border-text-secondary/10">
         <div className="max-w-4xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between mb-2">
-            <button
-              onClick={() => router.push('/dashboard')}
-              className="flex items-center gap-2 text-text-secondary hover:text-[#fee801] transition-colors"
-            >
-              <ArrowLeft className="w-5 h-5" />
-              <span>Back</span>
-            </button>
-
-            {/* Progress */}
-            <div className="text-text-secondary">
-              Question <span className="text-[#fee801] font-bold">{currentIndex + 1}</span> / {words.length}
+          <div className="flex items-center justify-between">
+            <div className="flex-1">
+              <button
+                onClick={() => router.push('/dashboard')}
+                className="flex items-center gap-2 text-text-secondary hover:text-primary-yellow transition-colors cursor-pointer"
+              >
+                <ArrowLeft className="w-5 h-5" />
+                <span>Back</span>
+              </button>
             </div>
 
-            {/* Timer */}
-            <div className="flex items-center gap-2 text-text-secondary">
+            {/* Progress - Center */}
+            <div className="flex-1 text-center text-text-secondary">
+              Question <span className="text-primary-yellow font-bold">{currentIndex + 1}</span> / {words.length}
+            </div>
+
+            {/* Timer - Right */}
+            <div className="flex-1 flex items-center justify-end gap-2 text-text-secondary">
               <Clock className="w-5 h-5" />
               <span className="font-mono">{timer}s</span>
             </div>
@@ -375,7 +406,7 @@ export default function VocabPage() {
       <div className="max-w-4xl mx-auto px-4 mt-4">
         <div className="h-2 bg-surface rounded-full overflow-hidden">
           <motion.div
-            className="h-full bg-[#fee801]"
+            className="h-full bg-primary-yellow"
             initial={{ width: 0 }}
             animate={{ width: `${((currentIndex + 1) / words.length) * 100}%` }}
             transition={{ duration: 0.3 }}
@@ -400,11 +431,11 @@ export default function VocabPage() {
               <h1 className="text-5xl font-bold text-text-primary mb-2">{currentWord.indo}</h1>
               <div className="flex items-center justify-center gap-2">
                 {currentWord.class && (
-                  <span className="inline-block px-3 py-1 bg-[#fee801] text-black text-xs font-semibold rounded-full">
+                  <span className="inline-block px-3 py-1 bg-primary-yellow text-black text-xs font-semibold rounded-full">
                     {currentWord.class}
                   </span>
                 )}
-                <span className="inline-block px-3 py-1 bg-[#7c5cff] text-white text-xs rounded-full">
+                <span className="inline-block px-3 py-1 bg-secondary-purple text-white text-xs rounded-full">
                   {currentWord.category}
                 </span>
               </div>
@@ -428,7 +459,7 @@ export default function VocabPage() {
                 
                 {/* Visual underscore display */}
                 <div 
-                  className="bg-surface px-8 py-6 rounded-xl border-2 border-text-secondary/20 hover:border-[#fee801]/50 transition-colors cursor-text"
+                  className="bg-surface px-8 py-6 rounded-xl border-2 border-text-secondary/20 hover:border-primary-yellow hover:border-opacity-50 transition-colors cursor-text"
                   onClick={() => {
                     const input = document.querySelector('input[type="text"]') as HTMLInputElement;
                     if (input) input.focus();
@@ -446,7 +477,7 @@ export default function VocabPage() {
               <motion.div
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="flex items-center justify-center gap-2 text-[#fee801]"
+                className="flex items-center justify-center gap-2 text-primary-yellow"
               >
                 <Lightbulb className="w-5 h-5" />
                 <span className="text-sm">Hint: First letter revealed!</span>
@@ -463,7 +494,7 @@ export default function VocabPage() {
                   isSubmitting || 
                   !!feedback
                 }
-                className="px-12 py-4 bg-[#fee801] text-black rounded-xl font-bold text-lg hover:scale-105 disabled:opacity-50 disabled:hover:scale-100 transition-transform"
+                className="px-12 py-4 bg-primary-yellow text-black rounded-xl font-bold text-lg hover:scale-105 disabled:opacity-50 disabled:hover:scale-100 transition-transform cursor-pointer"
               >
                 {isSubmitting ? 'Checking...' : 'Submit'}
               </button>
@@ -510,7 +541,7 @@ export default function VocabPage() {
           <motion.div
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="bg-[#1a1b1e] border-2 border-[#fee801] rounded-3xl p-8 max-w-md w-full shadow-2xl"
+            className="bg-card-darker border-2 border-primary-yellow rounded-3xl p-8 max-w-md w-full shadow-2xl"
           >
             <div className="text-center space-y-6">
               {/* Spinner */}
@@ -518,7 +549,7 @@ export default function VocabPage() {
                 <motion.div
                   animate={{ rotate: 360 }}
                   transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                  className="w-16 h-16 border-4 border-[#fee801] border-t-transparent rounded-full"
+                  className="spinner-loading"
                 />
               </div>
 
@@ -544,6 +575,7 @@ export default function VocabPage() {
           onClose={() => router.push('/dashboard')}
           onPlayAgain={() => {
             setShowResultModal(false);
+            setIsLoading(true);
             setCurrentIndex(0);
             setGameResults([]);
             resetQuestion();
@@ -591,8 +623,8 @@ function ResultModal({
         animate={{ scale: 1, opacity: 1 }}
         transition={{ delay: 0.1 }}
         onClick={(e) => e.stopPropagation()}
-        className={`border-2 border-[#fee801] rounded-3xl p-8 max-w-md w-full shadow-2xl ${
-          theme === 'dark' ? 'bg-[#1a1b1e]' : 'bg-white'
+        className={`border-2 border-primary-yellow rounded-3xl p-8 max-w-md w-full shadow-2xl ${
+          theme === 'dark' ? 'bg-card-darker' : 'bg-white'
         }`}
       >
         <div className="text-center space-y-6">
@@ -609,7 +641,7 @@ function ResultModal({
           {/* Stats */}
           <div className="space-y-4">
             {/* XP Gained - Large Card */}
-            <div className="bg-[#fee801] rounded-2xl p-6">
+            <div className="bg-primary-yellow rounded-2xl p-6">
               <p className="text-black/70 text-sm font-semibold">Total XP Gained</p>
               <p className="text-5xl font-bold text-black">+{xpGained}</p>
             </div>
@@ -650,15 +682,15 @@ function ResultModal({
           <div className="flex gap-3 pt-2">
             <button
               onClick={onPlayAgain}
-              className="flex-1 px-6 py-4 bg-[#fee801] text-black rounded-xl font-bold text-lg hover:bg-[#fef030] transition-colors shadow-lg"
+              className="flex-1 px-6 py-4 bg-primary-yellow text-black rounded-xl font-bold text-lg hover:bg-primary-yellow-hover transition-colors shadow-lg cursor-pointer"
             >
               Play Again
             </button>
             <button
               onClick={onClose}
-              className={`flex-1 px-6 py-4 rounded-xl font-bold text-lg border-2 transition-colors hover:border-[#fee801] ${
+              className={`flex-1 px-6 py-4 rounded-xl font-bold text-lg border-2 transition-colors hover:border-primary-yellow cursor-pointer ${
                 theme === 'dark'
-                  ? 'bg-[#2a2b2e] border-gray-700 text-white'
+                  ? 'bg-card border-gray-700 text-white'
                   : 'bg-gray-100 border-gray-300 text-black'
               }`}
             >

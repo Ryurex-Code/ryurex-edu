@@ -5,9 +5,11 @@ import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { Trophy, BarChart3, BookOpen, LogOut, Play, Clock, Flame, Search } from 'lucide-react';
+import { Trophy, BarChart3, BookOpen, LogOut, Play, Clock, Flame, Search, Edit2 } from 'lucide-react';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import ThemeToggle from '@/components/ThemeToggle';
+import EditDisplayNameModal from '@/components/EditDisplayNameModal';
+import Leaderboard from '@/components/Leaderboard';
 import Image from 'next/image';
 
 interface UserStats {
@@ -18,6 +20,7 @@ interface UserStats {
     xp: number;
     level: number;
     streak: number;
+    display_name?: string;
   };
   stats: {
     words_due_today: number;
@@ -36,11 +39,13 @@ interface Category {
 }
 
 export default function DashboardPage() {
-  const [user, setUser] = useState<SupabaseUser | null>(null);
+  const [_user, setUser] = useState<SupabaseUser | null>(null);
   const [userStats, setUserStats] = useState<UserStats | null>(null);
+  const [displayName, setDisplayName] = useState('');
   const [categories, setCategories] = useState<Category[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const router = useRouter();
   const supabase = createClient();
 
@@ -58,7 +63,10 @@ export default function DashboardPage() {
           const response = await fetch('/api/userStats');
           if (response.ok) {
             const data = await response.json();
-            if (isMounted) setUserStats(data);
+            if (isMounted) {
+              setUserStats(data);
+              setDisplayName(data.user.display_name || data.user.username || '');
+            }
           }
         } catch (error) {
           console.error('Error fetching user stats:', error);
@@ -132,9 +140,18 @@ export default function DashboardPage() {
               </button>
             </div>
           </div>
-          <p className="text-muted-foreground text-lg">
-            Hi, <span className="text-[#fee801] font-semibold">{userStats?.user.username || user?.email}</span>! Ready to train your vocab today?
-          </p>
+          <div className="flex items-center justify-between">
+            <p className="text-muted-foreground text-lg">
+              Hi, <span className="text-primary-yellow font-semibold">{displayName || userStats?.user.display_name || 'User'}</span>! Ready to train your vocab today?
+            </p>
+            <button
+              onClick={() => setIsEditModalOpen(true)}
+              className="flex items-center gap-2 px-3 py-2 bg-primary-yellow-light border border-primary-yellow-light text-primary-yellow rounded-lg hover:bg-primary-yellow-light-hover transition-colors cursor-pointer"
+            >
+              <Edit2 className="w-4 h-4" />
+              <span className="text-sm">Edit Name</span>
+            </button>
+          </div>
         </motion.div>
 
         {/* XP Progress Bar */}
@@ -142,11 +159,11 @@ export default function DashboardPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="mb-8 bg-card border-2 border-[#fee801]/30 rounded-2xl p-6"
+          className="mb-8 bg-card border-2 border-primary-yellow border-opacity-30 rounded-2xl p-6"
         >
           <div className="flex justify-between items-center mb-3">
             <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-[#fee801] rounded-lg flex items-center justify-center">
+              <div className="w-8 h-8 bg-primary-yellow rounded-lg flex items-center justify-center">
                 <Trophy className="w-5 h-5 text-black" />
               </div>
               <span className="font-bold text-lg">Level {userStats?.user.level || 1}</span>
@@ -160,7 +177,7 @@ export default function DashboardPage() {
               initial={{ width: 0 }}
               animate={{ width: `${userStats?.stats.progress_percentage || 0}%` }}
               transition={{ duration: 1, ease: 'easeOut' }}
-              className="h-full bg-[#fee801]"
+              className="h-full bg-primary-yellow"
             />
           </div>
         </motion.div>
@@ -168,16 +185,16 @@ export default function DashboardPage() {
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           {[
-            { icon: BookOpen, label: 'Words Learned', value: userStats?.stats.words_learned || 0, iconBg: 'bg-[#fee801]', iconColor: 'text-black' },
-            { icon: Clock, label: 'Words Due Today', value: userStats?.stats.words_due_today || 0, iconBg: 'bg-[#7c5cff]', iconColor: 'text-white' },
-            { icon: Flame, label: 'Streak Days', value: userStats?.user.streak || 0, iconBg: 'bg-[#fee801]', iconColor: 'text-black' },
+            { icon: BookOpen, label: 'Words Learned', value: userStats?.stats.words_learned || 0, iconBg: 'bg-primary-yellow', iconColor: 'text-black' },
+            { icon: Clock, label: 'Words Due Today', value: userStats?.stats.words_due_today || 0, iconBg: 'bg-secondary-purple', iconColor: 'text-white' },
+            { icon: Flame, label: 'Streak Days', value: userStats?.user.streak || 0, iconBg: 'bg-primary-yellow', iconColor: 'text-black' },
           ].map((stat, index) => (
             <motion.div
               key={index}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 + index * 0.1 }}
-              className="bg-card border-2 border-theme rounded-2xl p-6 hover:border-[#fee801]/50 transition-colors"
+              className="bg-card border-2 border-theme rounded-2xl p-6 hover:border-primary-yellow hover:border-opacity-50 transition-colors"
             >
               <div className={`inline-flex items-center justify-center w-12 h-12 ${stat.iconBg} rounded-xl mb-4`}>
                 <stat.icon className={`w-6 h-6 ${stat.iconColor}`} />
@@ -197,8 +214,8 @@ export default function DashboardPage() {
             transition={{ delay: 0.5 }}
           >
             <Link href="/vocab">
-              <div className="group bg-card border-2 border-[#fee801]/30 rounded-3xl p-8 hover:border-[#fee801] transition-colors cursor-pointer">
-                <div className="flex items-center justify-center w-16 h-16 bg-[#fee801] rounded-2xl mb-4">
+              <div className="group bg-card border-2 border-primary-yellow border-opacity-30 rounded-3xl p-8 hover:border-primary-yellow transition-colors cursor-pointer">
+                <div className="flex items-center justify-center w-16 h-16 bg-primary-yellow rounded-2xl mb-4">
                   <Play className="w-8 h-8 text-black" />
                 </div>
                 <h3 className="text-2xl font-bold mb-2">Vocab Mode</h3>
@@ -206,10 +223,10 @@ export default function DashboardPage() {
                   Practice Indonesian to English vocabulary translation
                 </p>
                 <div className="flex items-center space-x-2 text-sm">
-                  <div className="w-6 h-6 bg-[#fee801] rounded-md flex items-center justify-center">
+                  <div className="w-6 h-6 bg-primary-yellow rounded-md flex items-center justify-center">
                     <Clock className="w-4 h-4 text-black" />
                   </div>
-                  <span className="text-[#fee801] font-semibold">
+                  <span className="text-primary-yellow font-semibold">
                     {userStats?.stats.words_due_today || 0} words due today
                   </span>
                 </div>
@@ -224,11 +241,11 @@ export default function DashboardPage() {
             transition={{ delay: 0.6 }}
           >
             <div className="relative bg-card border-2 border-theme rounded-3xl p-8 opacity-60 cursor-not-allowed">
-              <div className="absolute top-4 right-4 px-3 py-1 bg-[#7c5cff] rounded-lg text-xs text-white font-semibold">
+              <div className="absolute top-4 right-4 px-3 py-1 bg-secondary-purple rounded-lg text-xs text-white font-semibold">
                 Coming Soon
               </div>
               
-              <div className="flex items-center justify-center w-16 h-16 bg-[#7c5cff] rounded-2xl mb-4">
+              <div className="flex items-center justify-center w-16 h-16 bg-secondary-purple rounded-2xl mb-4">
                 <BarChart3 className="w-8 h-8 text-white" />
               </div>
               <h3 className="text-2xl font-bold mb-2">Sentence Mode</h3>
@@ -238,6 +255,16 @@ export default function DashboardPage() {
             </div>
           </motion.div>
         </div>
+
+        {/* Leaderboard Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.7 }}
+          className="mt-12"
+        >
+          <Leaderboard />
+        </motion.div>
 
         {/* Category Section */}
         <motion.div
@@ -260,7 +287,7 @@ export default function DashboardPage() {
               placeholder="Search categories..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-12 pr-4 py-4 bg-card border-2 border-theme rounded-2xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-[#fee801] transition-colors"
+              className="w-full pl-12 pr-4 py-4 bg-card border-2 border-theme rounded-2xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary-yellow transition-colors"
             />
           </div>
 
@@ -279,9 +306,9 @@ export default function DashboardPage() {
                   transition={{ delay: 0.8 + index * 0.05 }}
                 >
                   <Link href={`/category-menu/${encodeURIComponent(category.name)}`}>
-                    <div className="group bg-card border-2 border-theme rounded-2xl hover:border-[#fee801] transition-all cursor-pointer h-full flex flex-col overflow-hidden">
+                    <div className="group bg-card border-2 border-theme rounded-2xl hover:border-primary-yellow transition-all cursor-pointer h-full flex flex-col overflow-hidden">
                       {/* Image Container - Full width with rounded top corners */}
-                      <div className="relative w-full aspect-square bg-gradient-to-br from-[#fee801]/20 to-[#7c5cff]/20 flex items-center justify-center">
+                      <div className="relative w-full aspect-square bg-gradient-to-br from-primary-yellow-light to-secondary-purple-light flex items-center justify-center">
                         <Image 
                           src={`/images/categories/${category.name.toLowerCase()}.svg`}
                           alt={category.name}
@@ -294,7 +321,7 @@ export default function DashboardPage() {
                       {/* Content Section */}
                       <div className="p-4 flex flex-col flex-grow">
                         {/* Category Name */}
-                        <h3 className="text-lg font-bold text-center mb-3 group-hover:text-[#fee801] transition-colors">
+                        <h3 className="text-lg font-bold text-center mb-3 group-hover:text-primary-yellow transition-colors">
                           {category.name}
                         </h3>
 
@@ -305,7 +332,7 @@ export default function DashboardPage() {
                               initial={{ width: 0 }}
                               animate={{ width: `${progressPercentage}%` }}
                               transition={{ duration: 0.8, ease: 'easeOut' }}
-                              className="h-full bg-[#fee801]"
+                              className="h-full bg-primary-yellow"
                             />
                           </div>
                           <p className="text-xs text-muted-foreground text-center">
@@ -314,7 +341,7 @@ export default function DashboardPage() {
                         </div>
                         
                         {/* Play Button */}
-                        <button className="w-full py-2 bg-[#fee801] text-black rounded-lg font-semibold text-sm flex items-center justify-center gap-2 hover:bg-[#fef030] transition-colors group-hover:scale-105 cursor-pointer">
+                        <button className="w-full py-2 bg-primary-yellow text-black rounded-lg font-semibold text-sm flex items-center justify-center gap-2 hover:bg-primary-yellow-hover transition-colors group-hover:scale-105 cursor-pointer">
                           <Play className="w-4 h-4" />
                           Play
                         </button>
@@ -333,6 +360,16 @@ export default function DashboardPage() {
             </div>
           )}
         </motion.div>
+
+        {/* Edit Display Name Modal */}
+        <EditDisplayNameModal
+          isOpen={isEditModalOpen}
+          currentDisplayName={displayName}
+          onClose={() => setIsEditModalOpen(false)}
+          onSuccess={(newDisplayName) => {
+            setDisplayName(newDisplayName);
+          }}
+        />
       </div>
     </div>
   );

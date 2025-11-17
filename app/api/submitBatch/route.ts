@@ -32,6 +32,9 @@ export async function POST(request: NextRequest) {
 
     console.log(`📦 Processing batch of ${results.length} results for user ${user.id}`);
 
+    // Get today's date for comparison
+    const todayStr = new Date().toISOString().split('T')[0];
+
     let totalXpGained = 0;
     const updates = [];
 
@@ -41,7 +44,7 @@ export async function POST(request: NextRequest) {
       // Fetch current progress
       const { data: currentProgress, error: fetchError } = await supabase
         .from('user_vocab_progress')
-        .select('fluency, xp_earned, correct_count, wrong_count, response_avg')
+        .select('fluency, xp_earned, correct_count, wrong_count, response_avg, next_due')
         .eq('user_id', user.id)
         .eq('vocab_id', vocab_id)
         .single();
@@ -51,6 +54,10 @@ export async function POST(request: NextRequest) {
         continue;
       }
 
+      // Check if this word was previously studied (not first time)
+      const isPreviouslyStudied = !!currentProgress;
+      const isNextDueToday = !isPreviouslyStudied || currentProgress.next_due === todayStr;
+
       // HYBRID FORMULA: Linear for low fluency, exponential after fluency 3
       // Rule: if f ≤ 2 → days = f
       //       if f ≥ 3 → days = round(7 × 1.7^(f−3))
@@ -59,10 +66,16 @@ export async function POST(request: NextRequest) {
       
       if (correct && time_taken < 10) {
         // FAST CORRECT (<10s) - User is fluent!
-        fluencyChange = +1; // Gradual: +1 only
+        // Only increase fluency if it's the first time or next_due is today
+        if (isNextDueToday) {
+          fluencyChange = +1; // Gradual: +1 only
+        } else {
+          fluencyChange = 0; // Don't increase fluency if not due today
+        }
+        
         const newFluency = Math.max(0, Math.min(10, currentProgress.fluency + fluencyChange));
         
-        // Apply hybrid formula
+        // Apply hybrid formula based on NEW fluency value
         if (newFluency <= 2) {
           daysUntilNext = newFluency; // f=0→0, f=1→1, f=2→2
         } else {
@@ -72,11 +85,13 @@ export async function POST(request: NextRequest) {
         
       } else if (correct && time_taken >= 10) {
         // SLOW CORRECT (≥10s) - User not fluent yet
+        // ALWAYS decrease fluency regardless of next_due
         fluencyChange = -1; // Penalty for slow
         daysUntilNext = 0; // Force review TODAY
         
       } else {
         // WRONG - User doesn't know it
+        // ALWAYS decrease fluency regardless of next_due
         fluencyChange = -1;
         daysUntilNext = 0; // Force review TODAY
       }
@@ -85,7 +100,6 @@ export async function POST(request: NextRequest) {
       const newFluency = Math.max(0, Math.min(10, currentProgress.fluency + fluencyChange));
 
       // Calculate next due date
-      const todayStr = new Date().toISOString().split('T')[0];
       let nextDueDate;
       
       if (daysUntilNext === 0 || newFluency === 0) {
@@ -134,7 +148,7 @@ export async function POST(request: NextRequest) {
         xpGain
       });
 
-      console.log(`  📝 vocab_id ${vocab_id}: ${correct ? '✅' : '❌'} in ${time_taken}s → fluency ${currentProgress.fluency}→${newFluency}, next_due: ${nextDueDate}, response_avg: ${newResponseAvg.toFixed(1)}s, XP: +${xpGain}`);
+      console.log(`  📝 vocab_id ${vocab_id}: ${correct ? '✅' : '❌'} in ${time_taken}s → fluency ${currentProgress.fluency}→${newFluency}${correct && !isNextDueToday && time_taken < 10 ? ' (locked, next_due not today)' : ''}, next_due: ${nextDueDate}, response_avg: ${newResponseAvg.toFixed(1)}s, XP: +${xpGain}`);
     }
 
     // Batch update all progress records

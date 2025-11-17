@@ -148,7 +148,13 @@ export default function CategoryMenuPage() {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <div className="w-16 h-16 border-4 border-[#fee801] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <div className="flex justify-center mb-4">
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+              className="spinner-loading"
+            />
+          </div>
           <p className="text-text-secondary">Loading category...</p>
         </div>
       </div>
@@ -162,7 +168,7 @@ export default function CategoryMenuPage() {
           <p className="text-text-secondary">Category not found</p>
           <button
             onClick={() => router.push('/dashboard')}
-            className="mt-4 px-6 py-3 bg-[#fee801] text-black rounded-lg font-semibold hover:scale-105 transition-transform cursor-pointer"
+            className="mt-4 px-6 py-3 bg-primary-yellow text-black rounded-lg font-semibold hover:scale-105 transition-transform cursor-pointer"
           >
             Back to Dashboard
           </button>
@@ -180,7 +186,7 @@ export default function CategoryMenuPage() {
             {/* Back Button */}
             <button
               onClick={() => router.push('/dashboard')}
-              className="flex items-center gap-2 text-text-secondary hover:text-[#fee801] transition-colors cursor-pointer"
+              className="flex items-center gap-2 text-text-secondary hover:text-primary-yellow hover:font-semibold transition-colors cursor-pointer"
             >
               <ArrowLeft className="w-5 h-5" />
               <span>Back to Dashboard</span>
@@ -225,8 +231,8 @@ export default function CategoryMenuPage() {
                     onClick={() => setSelectedSubcategory(sub.subcategory)}
                     className={`p-6 rounded-2xl border-2 transition-all text-left cursor-pointer ${
                       selectedSubcategory === sub.subcategory
-                        ? 'bg-[#fee801] border-[#fee801] text-black scale-105 shadow-lg'
-                        : 'bg-[#fee801]/90 border-[#fee801]/50 text-black hover:bg-[#fee801] hover:border-[#fee801] hover:scale-102'
+                        ? 'bg-primary-yellow border-primary-yellow text-black scale-105 shadow-lg'
+                        : 'bg-primary-yellow border-primary-yellow text-black hover:scale-102 hover:shadow-md'
                     }`}
                   >
                     <div className="flex items-center justify-between mb-2">
@@ -235,7 +241,7 @@ export default function CategoryMenuPage() {
                       </h3>
                       {selectedSubcategory === sub.subcategory && (
                         <div className="w-6 h-6 bg-black rounded-full flex items-center justify-center">
-                          <svg className="w-4 h-4 text-[#fee801]" fill="currentColor" viewBox="0 0 20 20">
+                          <svg className="w-4 h-4 text-primary-yellow" fill="currentColor" viewBox="0 0 20 20">
                             <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                           </svg>
                         </div>
@@ -277,7 +283,7 @@ export default function CategoryMenuPage() {
                 className="bg-card border-2 border-theme rounded-2xl overflow-hidden"
               >
                 {/* Image/Icon */}
-                <div className="relative w-full aspect-square bg-gradient-to-br from-[#fee801]/20 to-[#7c5cff]/20 flex items-center justify-center overflow-hidden">
+                <div className="relative w-full aspect-square bg-gradient-to-br from-primary-yellow-light to-secondary-purple-light flex items-center justify-center overflow-hidden">
                   {categoryImages[categoryName.toLowerCase()] ? (
                     <Image
                       src={categoryImages[categoryName.toLowerCase()]}
@@ -318,8 +324,8 @@ export default function CategoryMenuPage() {
                   disabled={selectedSubcategory === null}
                   className={`w-full py-4 rounded-2xl font-bold text-lg flex items-center justify-center gap-3 transition-all cursor-pointer ${
                     selectedSubcategory !== null
-                      ? 'bg-[#fee801] text-black hover:scale-105 hover:shadow-lg'
-                      : 'bg-[#fee801]/50 text-black/50 cursor-not-allowed'
+                      ? 'bg-primary-yellow text-black hover:scale-105 hover:shadow-lg'
+                      : 'bg-primary-yellow text-black opacity-50 cursor-not-allowed'
                   }`}
                 >
                   <Play className="w-5 h-5" />
@@ -332,8 +338,8 @@ export default function CategoryMenuPage() {
                   disabled={selectedSubcategory === null}
                   className={`w-full py-4 rounded-2xl font-bold text-lg flex items-center justify-center gap-3 transition-all relative cursor-pointer ${
                     selectedSubcategory !== null
-                      ? 'bg-[#7c5cff] text-white hover:scale-105 hover:shadow-lg'
-                      : 'bg-[#7c5cff]/50 text-white/50 cursor-not-allowed'
+                      ? 'bg-secondary-purple text-white hover:scale-105 hover:shadow-lg'
+                      : 'bg-secondary-purple text-white opacity-50 cursor-not-allowed'
                   }`}
                 >
                   <Play className="w-5 h-5" />

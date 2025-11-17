@@ -12,7 +12,7 @@ export default function ThemeToggle() {
       whileHover={{ scale: 1.1 }}
       whileTap={{ scale: 0.9 }}
       onClick={toggleTheme}
-      className="relative p-2 rounded-lg bg-card border border-theme hover:border-[#fee801]/50 transition-all"
+      className="relative p-2 rounded-lg bg-card border border-theme hover:border-[#E2B714]/50 transition-all"
       aria-label="Toggle theme"
     >
       <div className="relative w-6 h-6">
@@ -27,7 +27,7 @@ export default function ThemeToggle() {
           transition={{ duration: 0.3 }}
           className="absolute inset-0"
         >
-          <Sun className="w-6 h-6 text-[#f5c400]" />
+          <Sun className="w-6 h-6 text-primary-yellow" />
         </motion.div>
 
         {/* Moon icon for dark mode */}
@@ -41,7 +41,7 @@ export default function ThemeToggle() {
           transition={{ duration: 0.3 }}
           className="absolute inset-0"
         >
-          <Moon className="w-6 h-6 text-[#7c5cff]" />
+          <Moon className="w-6 h-6 text-secondary-purple" />
         </motion.div>
       </div>
     </motion.button>
