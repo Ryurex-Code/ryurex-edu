@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { GraduationCap, User, LogOut } from 'lucide-react';
+import { LogOut, Menu, X } from 'lucide-react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
@@ -10,19 +11,10 @@ import type { User as SupabaseUser } from '@supabase/supabase-js';
 import ThemeToggle from '@/components/ThemeToggle';
 
 export default function Navbar() {
-  const [scrolled, setScrolled] = useState(false);
   const [user, setUser] = useState<SupabaseUser | null>(null);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const router = useRouter();
   const supabase = createClient();
-
-  useEffect(() => {
-    const handleScroll = () => {
-      setScrolled(window.scrollY > 20);
-    };
-
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
 
   useEffect(() => {
     const getUser = async () => {
@@ -47,79 +39,108 @@ export default function Navbar() {
   };
 
   return (
-    <motion.nav
-      initial={{ y: -100 }}
-      animate={{ y: 0 }}
-      transition={{ duration: 0.5 }}
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        scrolled
-          ? 'bg-[#0f1115]/80 backdrop-blur-lg shadow-lg'
-          : 'bg-transparent'
-      }`}
-    >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16 md:h-20">
+    <nav className="fixed top-0 left-0 right-0 z-50 bg-card border-b border-theme">
+      <div className="max-w-7xl mx-auto px-4">
+        <div className="flex justify-between items-center h-16">
           {/* Logo */}
-          <Link href="/" className="flex items-center space-x-2 group">
-            <GraduationCap className="w-8 h-8 text-[#fee801] group-hover:scale-110 transition-transform" />
-            <span className="text-xl md:text-2xl font-bold bg-gradient-to-r from-[#fee801] to-[#7c5cff] bg-clip-text text-transparent">
-              Ryurex Edu Vocab Game
-            </span>
+          <Link href="/" className="flex items-center gap-3 cursor-pointer">
+            <Image src="/favicon.svg" width={32} height={32} alt="Ryurex" />
+            <div className="flex flex-col">
+              <div className="text-lg font-bold text-primary-yellow">Ryurex</div>
+              <div className="text-xs font-semibold text-primary-yellow">EDU</div>
+            </div>
           </Link>
 
-          {/* Auth Buttons & Theme Toggle */}
-          <div className="flex items-center space-x-3 md:space-x-4">
-            {/* Theme Toggle */}
+          {/* Desktop Menu */}
+          <div className="hidden md:flex items-center gap-4">
             <ThemeToggle />
             
             {user ? (
               <>
                 <Link href="/dashboard">
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    className="flex items-center space-x-2 px-4 md:px-6 py-2 text-sm md:text-base text-gray-300 hover:text-white transition-colors"
-                  >
-                    <User className="w-4 h-4" />
-                    <span className="hidden md:inline">Dashboard</span>
-                  </motion.button>
+                  <button className="flex items-center justify-center h-10 px-4 bg-primary-yellow text-black rounded-lg hover:bg-primary-yellow-hover transition-colors cursor-pointer font-semibold text-sm">
+                    Dashboard
+                  </button>
                 </Link>
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
+                <button
                   onClick={handleLogout}
-                  className="flex items-center space-x-2 px-4 md:px-6 py-2 text-sm md:text-base bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 rounded-lg transition-all"
+                  className="w-10 h-10 bg-red-500/10 border border-red-500/20 rounded-lg hover:bg-red-500/20 transition-colors flex items-center justify-center cursor-pointer"
                 >
-                  <LogOut className="w-4 h-4" />
-                  <span className="hidden md:inline">Logout</span>
-                </motion.button>
+                  <LogOut className="w-5 h-5 text-red-400" />
+                </button>
               </>
             ) : (
               <>
                 <Link href="/login">
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    className="px-4 md:px-6 py-2 text-sm md:text-base text-gray-300 hover:text-white transition-colors"
-                  >
+                  <button className="px-4 py-2 text-sm font-medium bg-card-dark border border-theme rounded-lg hover:border-primary-yellow/50 transition-colors cursor-pointer">
                     Login
-                  </motion.button>
+                  </button>
                 </Link>
                 <Link href="/signup">
-                  <motion.button
-                    whileHover={{ scale: 1.05, boxShadow: '0 0 20px rgba(254, 232, 1, 0.5)' }}
-                    whileTap={{ scale: 0.95 }}
-                    className="px-4 md:px-6 py-2 text-sm md:text-base bg-[#fee801] hover:bg-[#D4AF37] text-[#0f1115] rounded-lg font-medium transition-all"
-                  >
+                  <button className="px-6 py-2 text-sm font-medium bg-primary-yellow text-black rounded-lg hover:bg-primary-yellow-hover transition-colors cursor-pointer">
                     Sign Up
-                  </motion.button>
+                  </button>
                 </Link>
               </>
             )}
           </div>
+
+          {/* Mobile Menu Button */}
+          <div className="flex md:hidden items-center gap-3">
+            <ThemeToggle />
+            <button
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="p-2 cursor-pointer"
+            >
+              {isMobileMenuOpen ? (
+                <X className="w-6 h-6" />
+              ) : (
+                <Menu className="w-6 h-6" />
+              )}
+            </button>
+          </div>
         </div>
+
+        {/* Mobile Menu */}
+        <motion.div
+          initial={false}
+          animate={isMobileMenuOpen ? { height: 'auto' } : { height: 0 }}
+          transition={{ duration: 0.3 }}
+          className="overflow-hidden md:hidden"
+        >
+          <div className="pb-4 flex flex-col gap-3">
+            {user ? (
+              <>
+                <Link href="/dashboard">
+                  <button className="w-full px-4 py-2 text-sm font-medium bg-primary-yellow text-black rounded-lg hover:bg-primary-yellow-hover transition-colors cursor-pointer">
+                    Dashboard
+                  </button>
+                </Link>
+                <button
+                  onClick={handleLogout}
+                  className="w-full px-4 py-2 text-sm font-medium bg-red-500/10 border border-red-500/20 text-red-400 rounded-lg hover:bg-red-500/20 transition-colors cursor-pointer"
+                >
+                  Logout
+                </button>
+              </>
+            ) : (
+              <>
+                <Link href="/login">
+                  <button className="w-full px-4 py-2 text-sm font-medium rounded-lg hover:bg-card-dark transition-colors cursor-pointer">
+                    Login
+                  </button>
+                </Link>
+                <Link href="/signup">
+                  <button className="w-full px-4 py-2 text-sm font-medium bg-primary-yellow text-black rounded-lg hover:bg-primary-yellow-hover transition-colors cursor-pointer">
+                    Sign Up
+                  </button>
+                </Link>
+              </>
+            )}
+          </div>
+        </motion.div>
       </div>
-    </motion.nav>
+    </nav>
   );
 }
 

@@ -5,12 +5,21 @@ import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { Trophy, BarChart3, BookOpen, LogOut, Play, Clock, Flame, Search, Edit2 } from 'lucide-react';
+import { BarChart3, BookOpen, LogOut, Play, Clock, Search, Edit2, Zap, Menu, X } from 'lucide-react';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import ThemeToggle from '@/components/ThemeToggle';
 import EditDisplayNameModal from '@/components/EditDisplayNameModal';
 import Leaderboard from '@/components/Leaderboard';
+import Footer from '@/components/Footer';
 import Image from 'next/image';
+
+// Helper function to convert 'a1-oxford' to 'A1 Oxford'
+const formatCategoryName = (category: string): string => {
+  return category
+    .split('-')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+};
 
 interface UserStats {
   user: {
@@ -18,16 +27,13 @@ interface UserStats {
     username: string;
     email: string;
     xp: number;
-    level: number;
     streak: number;
     display_name?: string;
   };
   stats: {
     words_due_today: number;
+    sentences_due_today: number;
     words_learned: number;
-    xp_progress: number;
-    xp_needed: number;
-    progress_percentage: number;
   };
 }
 
@@ -39,13 +45,14 @@ interface Category {
 }
 
 export default function DashboardPage() {
-  const [_user, setUser] = useState<SupabaseUser | null>(null);
+  const [, setUser] = useState<SupabaseUser | null>(null);
   const [userStats, setUserStats] = useState<UserStats | null>(null);
   const [displayName, setDisplayName] = useState('');
   const [categories, setCategories] = useState<Category[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const router = useRouter();
   const supabase = createClient();
 
@@ -114,87 +121,129 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground py-20 px-4 sm:px-6 lg:px-8">
-      <div className="relative max-w-6xl mx-auto">
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-8"
-        >
-          <div className="flex justify-between items-center mb-4">
-            <h1 className="text-4xl md:text-5xl font-bold">
-              Dashboard
-            </h1>
-            <div className="flex items-center space-x-3">
-              {/* Theme Toggle */}
+    <div className="flex flex-col min-h-screen bg-background text-foreground">
+      {/* Navbar */}
+      <nav className="sticky top-0 z-40 bg-card">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            {/* Logo/Brand */}
+            <Link href="/dashboard" className="flex items-center gap-3 cursor-pointer">
+              <Image
+                src="/favicon.svg"
+                alt="Ryurex Edu Logo"
+                width={32}
+                height={32}
+                className="w-8 h-8"
+              />
+              <div className="flex flex-col">
+                <div className="text-lg font-bold text-primary-yellow leading-none">
+                  Ryurex
+                </div>
+                <div className="text-xs font-semibold text-primary-yellow tracking-wide">
+                  EDU
+                </div>
+              </div>
+            </Link>
+
+            {/* Desktop Menu */}
+            <div className="hidden md:flex items-center gap-4">
+              <button
+                onClick={() => setIsEditModalOpen(true)}
+                className="flex items-center justify-center w-10 h-10 bg-primary-yellow rounded-lg hover:bg-primary-yellow-hover transition-colors cursor-pointer"
+              >
+                <Edit2 className="w-5 h-5 text-black" />
+              </button>
               <ThemeToggle />
-              
-              {/* Logout Button */}
               <button
                 onClick={handleLogout}
-                className="flex items-center space-x-2 px-4 py-2 bg-red-500/10 border border-red-500/20 text-red-400 rounded-lg hover:bg-red-500/20 transition-colors cursor-pointer"
+                className="flex items-center justify-center w-10 h-10 bg-red-500/10 border border-red-500/20 text-red-400 rounded-lg hover:bg-red-500/20 transition-colors cursor-pointer"
+              >
+                <LogOut className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Mobile Menu Button */}
+            <button
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="md:hidden p-2 hover:bg-theme rounded-lg transition-colors cursor-pointer"
+            >
+              {isMobileMenuOpen ? (
+                <X className="w-6 h-6" />
+              ) : (
+                <Menu className="w-6 h-6" />
+              )}
+            </button>
+          </div>
+
+          {/* Mobile Menu */}
+          <motion.div
+            initial={false}
+            animate={isMobileMenuOpen ? { height: 'auto' } : { height: 0 }}
+            transition={{ duration: 0.3 }}
+            className="md:hidden overflow-hidden"
+          >
+            <div className="px-4 py-4 space-y-3">
+              <button
+                onClick={() => {
+                  setIsEditModalOpen(true);
+                  setIsMobileMenuOpen(false);
+                }}
+                className="w-full flex items-center gap-2 px-4 py-2 text-sm font-medium text-foreground hover:text-primary-yellow transition-colors cursor-pointer"
+              >
+                <span>Edit Name</span>
+              </button>
+              <div className="flex items-center justify-between px-4 py-2">
+                <span className="text-sm font-medium">Theme</span>
+                <ThemeToggle />
+              </div>
+              <button
+                onClick={() => {
+                  handleLogout();
+                  setIsMobileMenuOpen(false);
+                }}
+                className="w-full flex items-center gap-2 px-4 py-2 bg-red-500/10 border border-red-500/20 text-red-400 rounded-lg hover:bg-red-500/20 transition-colors text-sm cursor-pointer"
               >
                 <LogOut className="w-4 h-4" />
                 <span>Logout</span>
               </button>
             </div>
-          </div>
-          <div className="flex items-center justify-between">
-            <p className="text-muted-foreground text-lg">
-              Hi, <span className="text-primary-yellow font-semibold">{displayName || userStats?.user.display_name || 'User'}</span>! Ready to train your vocab today?
-            </p>
-            <button
-              onClick={() => setIsEditModalOpen(true)}
-              className="flex items-center gap-2 px-3 py-2 bg-primary-yellow-light border border-primary-yellow-light text-primary-yellow rounded-lg hover:bg-primary-yellow-light-hover transition-colors cursor-pointer"
-            >
-              <Edit2 className="w-4 h-4" />
-              <span className="text-sm">Edit Name</span>
-            </button>
-          </div>
-        </motion.div>
+          </motion.div>
+        </div>
+      </nav>
 
-        {/* XP Progress Bar */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="mb-8 bg-card border-2 border-primary-yellow border-opacity-30 rounded-2xl p-6"
-        >
-          <div className="flex justify-between items-center mb-3">
-            <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-primary-yellow rounded-lg flex items-center justify-center">
-                <Trophy className="w-5 h-5 text-black" />
-              </div>
-              <span className="font-bold text-lg">Level {userStats?.user.level || 1}</span>
+      {/* Main Content */}
+      <div className="flex-1 py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto">
+          {/* Welcome Section */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-12"
+          >
+            <div>
+              <h1 className="text-4xl md:text-5xl font-bold mb-2">
+                Welcome back, <span className="text-primary-yellow">{displayName || userStats?.user.display_name || 'User'}</span>!
+              </h1>
+              <p className="text-muted-foreground text-lg">
+                Ready to train your vocabulary today? Let&apos;s get started! 🚀
+              </p>
             </div>
-            <span className="text-sm font-medium text-foreground">
-              {userStats?.stats.xp_progress || 0} / {userStats?.stats.xp_needed || 100} XP
-            </span>
-          </div>
-          <div className="w-full bg-input border border-input rounded-lg h-4 overflow-hidden">
-            <motion.div
-              initial={{ width: 0 }}
-              animate={{ width: `${userStats?.stats.progress_percentage || 0}%` }}
-              transition={{ duration: 1, ease: 'easeOut' }}
-              className="h-full bg-primary-yellow"
-            />
-          </div>
-        </motion.div>
+          </motion.div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           {[
             { icon: BookOpen, label: 'Words Learned', value: userStats?.stats.words_learned || 0, iconBg: 'bg-primary-yellow', iconColor: 'text-black' },
             { icon: Clock, label: 'Words Due Today', value: userStats?.stats.words_due_today || 0, iconBg: 'bg-secondary-purple', iconColor: 'text-white' },
-            { icon: Flame, label: 'Streak Days', value: userStats?.user.streak || 0, iconBg: 'bg-primary-yellow', iconColor: 'text-black' },
+            { icon: BarChart3, label: 'Sentences Due Today', value: userStats?.stats.sentences_due_today || 0, iconBg: 'bg-secondary-purple', iconColor: 'text-white' },
+            { icon: Zap, label: 'Total XP', value: userStats?.user.xp || 0, iconBg: 'bg-primary-yellow', iconColor: 'text-black' },
           ].map((stat, index) => (
             <motion.div
               key={index}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 + index * 0.1 }}
-              className="bg-card border-2 border-theme rounded-2xl p-6 hover:border-primary-yellow hover:border-opacity-50 transition-colors"
+              className="bg-card rounded-2xl p-6 shadow-lg"
             >
               <div className={`inline-flex items-center justify-center w-12 h-12 ${stat.iconBg} rounded-xl mb-4`}>
                 <stat.icon className={`w-6 h-6 ${stat.iconColor}`} />
@@ -214,7 +263,7 @@ export default function DashboardPage() {
             transition={{ delay: 0.5 }}
           >
             <Link href="/vocab">
-              <div className="group bg-card border-2 border-primary-yellow border-opacity-30 rounded-3xl p-8 hover:border-primary-yellow transition-colors cursor-pointer">
+              <div className="group bg-card border-2 border-primary-yellow border-opacity-30 rounded-3xl p-8 hover:border-primary-yellow transition-colors cursor-pointer shadow-lg">
                 <div className="flex items-center justify-center w-16 h-16 bg-primary-yellow rounded-2xl mb-4">
                   <Play className="w-8 h-8 text-black" />
                 </div>
@@ -234,25 +283,31 @@ export default function DashboardPage() {
             </Link>
           </motion.div>
 
-          {/* Sentence Mode - Coming Soon */}
+          {/* Sentence Mode */}
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.6 }}
           >
-            <div className="relative bg-card border-2 border-theme rounded-3xl p-8 opacity-60 cursor-not-allowed">
-              <div className="absolute top-4 right-4 px-3 py-1 bg-secondary-purple rounded-lg text-xs text-white font-semibold">
-                Coming Soon
+            <Link href="/sentence">
+              <div className="group bg-card border-2 border-secondary-purple border-opacity-30 rounded-3xl p-8 hover:border-secondary-purple transition-colors cursor-pointer shadow-lg">
+                <div className="flex items-center justify-center w-16 h-16 bg-secondary-purple rounded-2xl mb-4">
+                  <BarChart3 className="w-8 h-8 text-white" />
+                </div>
+                <h3 className="text-2xl font-bold mb-2">Sentence Mode</h3>
+                <p className="text-muted-foreground mb-4">
+                  Practice vocabulary in context with full sentences
+                </p>
+                <div className="flex items-center space-x-2 text-sm">
+                  <div className="w-6 h-6 bg-secondary-purple rounded-md flex items-center justify-center">
+                    <Clock className="w-4 h-4 text-white" />
+                  </div>
+                  <span className="text-secondary-purple font-semibold">
+                    {userStats?.stats.sentences_due_today || 0} sentences due today
+                  </span>
+                </div>
               </div>
-              
-              <div className="flex items-center justify-center w-16 h-16 bg-secondary-purple rounded-2xl mb-4">
-                <BarChart3 className="w-8 h-8 text-white" />
-              </div>
-              <h3 className="text-2xl font-bold mb-2">Sentence Mode</h3>
-              <p className="text-muted-foreground">
-                Practice vocabulary in context with full sentences
-              </p>
-            </div>
+            </Link>
           </motion.div>
         </div>
 
@@ -287,7 +342,7 @@ export default function DashboardPage() {
               placeholder="Search categories..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-12 pr-4 py-4 bg-card border-2 border-theme rounded-2xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary-yellow transition-colors"
+              className="w-full pl-12 pr-4 py-4 bg-card rounded-2xl text-foreground placeholder:text-muted-foreground focus:outline-none transition-colors shadow-lg"
             />
           </div>
 
@@ -306,7 +361,7 @@ export default function DashboardPage() {
                   transition={{ delay: 0.8 + index * 0.05 }}
                 >
                   <Link href={`/category-menu/${encodeURIComponent(category.name)}`}>
-                    <div className="group bg-card border-2 border-theme rounded-2xl hover:border-primary-yellow transition-all cursor-pointer h-full flex flex-col overflow-hidden">
+                    <div className="group bg-card rounded-2xl hover:border-primary-yellow transition-all cursor-pointer h-full flex flex-col overflow-hidden shadow-lg">
                       {/* Image Container - Full width with rounded top corners */}
                       <div className="relative w-full aspect-square bg-gradient-to-br from-primary-yellow-light to-secondary-purple-light flex items-center justify-center">
                         <Image 
@@ -314,6 +369,10 @@ export default function DashboardPage() {
                           alt={category.name}
                           fill
                           className="object-cover"
+                          onError={(e) => {
+                            // Fallback to default image if category image doesn't exist
+                            e.currentTarget.src = '/images/categories/default.svg';
+                          }}
                         />
                         
                       </div>
@@ -322,7 +381,7 @@ export default function DashboardPage() {
                       <div className="p-4 flex flex-col flex-grow">
                         {/* Category Name */}
                         <h3 className="text-lg font-bold text-center mb-3 group-hover:text-primary-yellow transition-colors">
-                          {category.name}
+                          {formatCategoryName(category.name)}
                         </h3>
 
                         {/* Progress Bar */}
@@ -370,7 +429,11 @@ export default function DashboardPage() {
             setDisplayName(newDisplayName);
           }}
         />
+        </div>
       </div>
+
+      {/* Full-width Footer */}
+      <Footer />
     </div>
   );
 }

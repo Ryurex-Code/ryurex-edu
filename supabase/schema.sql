@@ -14,7 +14,6 @@ CREATE TABLE IF NOT EXISTS public.users (
   username text,
   display_name text,
   xp integer DEFAULT 0,
-  level integer DEFAULT 1,
   streak integer DEFAULT 0,
   last_activity_date date,
   created_at timestamp with time zone DEFAULT now(),

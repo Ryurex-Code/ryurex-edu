@@ -1,11 +1,10 @@
 import { createClient } from '@/lib/supabase/server';
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 
 interface LeaderboardEntry {
   user_id: string;
   display_name: string;
   xp: number;
-  level: number;
   rank: number;
 }
 
@@ -32,7 +31,7 @@ export async function GET() {
     // Get top 10 users by XP (leaderboard)
     const { data: leaderboardData, error: leaderboardError } = await supabase
       .from('users')
-      .select('id, display_name, xp, level')
+      .select('id, display_name, xp')
       .order('xp', { ascending: false })
       .limit(10);
 
@@ -52,7 +51,6 @@ export async function GET() {
         user_id: entry.id,
         display_name: entry.display_name || 'Unknown User',
         xp: entry.xp || 0,
-        level: entry.level || 1,
         rank: index + 1,
       })
     );
@@ -81,7 +79,7 @@ export async function GET() {
     // Get current user's data
     const { data: currentUserData, error: currentUserError } = await supabase
       .from('users')
-      .select('display_name, xp, level')
+      .select('display_name, xp')
       .eq('id', user.id)
       .single();
 
@@ -103,7 +101,6 @@ export async function GET() {
         id: user.id,
         display_name: currentUserData?.display_name || 'Unknown User',
         xp: currentUserData?.xp || 0,
-        level: currentUserData?.level || 1,
       },
     });
   } catch (error) {

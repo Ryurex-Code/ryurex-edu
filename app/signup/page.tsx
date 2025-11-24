@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { Mail, Lock, Sparkles, UserPlus, User } from 'lucide-react';
+import { Mail, Lock, Sparkles, UserPlus, User, Eye, EyeOff } from 'lucide-react';
 import ThemeToggle from '@/components/ThemeToggle';
 
 export default function SignUpPage() {
@@ -13,6 +13,8 @@ export default function SignUpPage() {
   const [displayName, setDisplayName] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -203,14 +205,21 @@ export default function SignUpPage() {
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 <input
                   id="password"
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   minLength={6}
-                  className="w-full pl-11 pr-4 py-3 bg-input border border-input rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all text-foreground placeholder-muted-foreground"
+                  className="w-full pl-11 pr-12 py-3 bg-input border border-input rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all text-foreground placeholder-muted-foreground"
                   placeholder="••••••••"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors dark:text-foreground dark:hover:text-foreground"
+                >
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
               </div>
               <p className="mt-1 text-xs text-muted-foreground">At least 6 characters</p>
             </div>
@@ -224,13 +233,20 @@ export default function SignUpPage() {
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 <input
                   id="confirmPassword"
-                  type="password"
+                  type={showConfirmPassword ? 'text' : 'password'}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   required
-                  className="w-full pl-11 pr-4 py-3 bg-input border border-input rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all text-foreground placeholder-muted-foreground"
+                  className="w-full pl-11 pr-12 py-3 bg-input border border-input rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all text-foreground placeholder-muted-foreground"
                   placeholder="••••••••"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors dark:text-foreground dark:hover:text-foreground"
+                >
+                  {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
               </div>
             </div>
 
@@ -240,7 +256,7 @@ export default function SignUpPage() {
               whileTap={{ scale: 0.98 }}
               type="submit"
               disabled={loading}
-              className="w-full py-3 bg-gradient-to-r from-primary-yellow to-primary-yellow-hover text-background rounded-lg font-semibold hover:shadow-lg hover:shadow-primary-yellow/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full py-3 bg-primary-yellow hover:bg-primary-yellow-hover text-black rounded-lg font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? 'Creating Account...' : 'Sign Up'}
             </motion.button>

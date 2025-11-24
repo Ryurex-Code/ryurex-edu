@@ -1,0 +1,37 @@
+<svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background with rounded corners -->
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FEE801;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#f5c400;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <rect width="512" height="512" fill="url(#bgGradient)" rx="100"/>
+  
+  <!-- Main Book/Academy Icon -->
+  <g transform="translate(256, 256)">
+    <!-- Left page of book -->
+    <rect x="-100" y="-120" width="90" height="240" fill="#0f1115" rx="8" opacity="0.9"/>
+    
+    <!-- Right page of book -->
+    <rect x="10" y="-120" width="90" height="240" fill="#1a1d24" rx="8" opacity="0.9"/>
+    
+    <!-- Book spine/binding -->
+    <rect x="-10" y="-120" width="20" height="240" fill="#0f1115" rx="4"/>
+    
+    <!-- Page lines - left page -->
+    <line x1="-95" y1="-100" x2="-15" y2="-100" stroke="#7c5cff" stroke-width="6" opacity="0.6"/>
+    <line x1="-95" y1="-50" x2="-15" y2="-50" stroke="#7c5cff" stroke-width="6" opacity="0.6"/>
+    <line x1="-95" y1="0" x2="-15" y2="0" stroke="#7c5cff" stroke-width="6" opacity="0.6"/>
+    <line x1="-95" y1="50" x2="-15" y2="50" stroke="#7c5cff" stroke-width="6" opacity="0.6"/>
+    <line x1="-95" y1="100" x2="-15" y2="100" stroke="#7c5cff" stroke-width="6" opacity="0.6"/>
+    
+    <!-- Page lines - right page -->
+    <line x1="15" y1="-100" x2="95" y2="-100" stroke="#FEE801" stroke-width="6" opacity="0.6"/>
+    <line x1="15" y1="-50" x2="95" y2="-50" stroke="#FEE801" stroke-width="6" opacity="0.6"/>
+    <line x1="15" y1="0" x2="95" y2="0" stroke="#FEE801" stroke-width="6" opacity="0.6"/>
+    <line x1="15" y1="50" x2="95" y2="50" stroke="#FEE801" stroke-width="6" opacity="0.6"/>
+    <line x1="15" y1="100" x2="95" y2="100" stroke="#FEE801" stroke-width="6" opacity="0.6"/>
+  </g>
+</svg>

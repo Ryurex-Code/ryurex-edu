@@ -18,6 +18,10 @@ const poppins = Poppins({
 export const metadata: Metadata = {
   title: "Ryurex Edu Vocab Game - Level up your English vocabulary",
   description: "An adaptive learning game that gets smarter as you do. Learn English vocabulary with gamification and spaced repetition.",
+  icons: {
+    icon: "/favicon.svg",
+    apple: "/favicon.svg",
+  },
 };
 
 export default function RootLayout({

@@ -41,14 +41,14 @@ export default function VocabPage() {
 
   // Timer interval
   useEffect(() => {
-    if (feedback || showResultModal) return; // Pause timer during feedback or result
+    if (isLoading || feedback || showResultModal) return; // Pause timer during loading, feedback or result
 
     const interval = setInterval(() => {
       setTimer((prev) => prev + 1);
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [feedback, showResultModal]);
+  }, [isLoading, feedback, showResultModal]);
 
   // Show hint after 10 seconds
   useEffect(() => {
@@ -201,7 +201,7 @@ export default function VocabPage() {
       const response = await fetch('/api/submitBatch', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ results }),
+        body: JSON.stringify({ results, mode: 'practice' }),
       });
 
       if (!response.ok) {

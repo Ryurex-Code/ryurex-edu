@@ -138,7 +138,7 @@ export async function POST(request: NextRequest) {
     // Get current user data
     const { data: userData, error: userError } = await supabase
       .from('users')
-      .select('xp, level, streak, last_activity_date')
+      .select('xp, streak, last_activity_date')
       .eq('id', user.id)
       .single();
 
@@ -147,8 +147,6 @@ export async function POST(request: NextRequest) {
     }
 
     const newXp = userData.xp + xpGained;
-    const newLevel = Math.floor(newXp / 100) + 1;
-    const leveledUp = newLevel > userData.level;
 
     // Update streak
     const today = new Date().toISOString().split('T')[0];
@@ -177,7 +175,6 @@ export async function POST(request: NextRequest) {
       .from('users')
       .update({
         xp: newXp,
-        level: newLevel,
         streak: newStreak,
         last_activity_date: today,
       })
@@ -196,8 +193,6 @@ export async function POST(request: NextRequest) {
         next_due: nextDueDate, // Already a string in YYYY-MM-DD format
         xp_gained: xpGained,
         new_xp: newXp,
-        new_level: newLevel,
-        leveled_up: leveledUp,
         streak: newStreak,
       },
     });

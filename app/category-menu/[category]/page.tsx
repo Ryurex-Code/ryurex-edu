@@ -71,6 +71,7 @@ export default function CategoryMenuPage() {
   const [categoryData, setCategoryData] = useState<CategoryData | null>(null);
   const [selectedSubcategory, setSelectedSubcategory] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
+  const [sentenceAvailability, setSentenceAvailability] = useState<{ [key: number]: boolean }>({});
 
   const fetchCategoryData = useCallback(async () => {
     try {
@@ -119,6 +120,20 @@ export default function CategoryMenuPage() {
             }));
           }
         }
+
+        // Check sentence availability for each subcategory (check vocab_master for sentence_english)
+        const sentenceAvail: { [key: number]: boolean } = {};
+        for (const sub of data.subcategories) {
+          const { data: vocabsWithSentence } = await supabase
+            .from('vocab_master')
+            .select('id')
+            .eq('category', categoryName)
+            .eq('subcategory', sub.subcategory)
+            .not('sentence_english', 'is', null);
+
+          sentenceAvail[sub.subcategory] = (vocabsWithSentence?.length ?? 0) > 0;
+        }
+        setSentenceAvailability(sentenceAvail);
       }
       
       setCategoryData(data);
@@ -149,8 +164,9 @@ export default function CategoryMenuPage() {
   };
 
   const handlePlaySentence = () => {
-    // Coming soon - sentence mode
-    alert('Sentence Mode is coming soon! 🚀');
+    if (selectedSubcategory !== null) {
+      router.push(`/sentencelearning?category=${encodeURIComponent(categoryName)}&subcategory=${selectedSubcategory}`);
+    }
   };
 
   if (loading) {
@@ -293,22 +309,20 @@ export default function CategoryMenuPage() {
               >
                 {/* Image/Icon */}
                 <div className="relative w-full aspect-square bg-gradient-to-br from-primary-yellow-light to-secondary-purple-light flex items-center justify-center overflow-hidden">
-                  {categoryImages[categoryName.toLowerCase()] ? (
-                    <Image
-                      src={categoryImages[categoryName.toLowerCase()]}
-                      alt={categoryName}
-                      fill
-                      className="object-cover"
-                      onError={(e) => {
-                        // Fallback to emoji if image fails to load
-                        e.currentTarget.style.display = 'none';
-                      }}
-                    />
-                  ) : (
-                    <div className="text-8xl">
-                      {categoryEmojis[categoryName.toLowerCase()] || '📚'}
-                    </div>
-                  )}
+                  <Image
+                    src={categoryImages[categoryName.toLowerCase()] || '/images/categories/default.svg'}
+                    alt={categoryName}
+                    fill
+                    className="object-cover"
+                    onError={(e) => {
+                      // Fallback to emoji if image fails to load
+                      e.currentTarget.style.display = 'none';
+                    }}
+                  />
+                  {/* Emoji fallback if image fails */}
+                  <div className="text-8xl absolute inset-0 flex items-center justify-center" style={{ display: 'none' }}>
+                    {categoryEmojis[categoryName.toLowerCase()] || '📚'}
+                  </div>
                 </div>
 
                 {/* Content */}
@@ -341,22 +355,16 @@ export default function CategoryMenuPage() {
                   Play Vocab Mode
                 </button>
 
-                {/* Sentence Mode Button */}
-                <button
-                  onClick={handlePlaySentence}
-                  disabled={selectedSubcategory === null}
-                  className={`w-full py-4 rounded-2xl font-bold text-lg flex items-center justify-center gap-3 transition-all relative cursor-pointer ${
-                    selectedSubcategory !== null
-                      ? 'bg-secondary-purple text-white hover:scale-105 hover:shadow-lg'
-                      : 'bg-secondary-purple text-white opacity-50 cursor-not-allowed'
-                  }`}
-                >
-                  <Play className="w-5 h-5" />
-                  Play Sentence Mode
-                  <span className="absolute top-2 right-2 px-2 py-1 bg-black/20 rounded-lg text-xs">
-                    Coming Soon
-                  </span>
-                </button>
+                {/* Sentence Mode Button - Only show if sentences available */}
+                {selectedSubcategory !== null && sentenceAvailability[selectedSubcategory] && (
+                  <button
+                    onClick={handlePlaySentence}
+                    className="w-full py-4 rounded-2xl font-bold text-lg flex items-center justify-center gap-3 transition-all cursor-pointer bg-secondary-purple text-white hover:scale-105 hover:shadow-lg"
+                  >
+                    <Play className="w-5 h-5" />
+                    Play Sentence Mode
+                  </button>
+                )}
               </div>
 
               {/* Info Text */}

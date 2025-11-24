@@ -59,14 +59,14 @@ export default function VocabGameContent() {
 
   // Timer interval
   useEffect(() => {
-    if (feedback || showResultModal) return; // Pause timer during feedback or result
+    if (isLoading || feedback || showResultModal) return; // Pause timer during loading, feedback or result
 
     const interval = setInterval(() => {
       setTimer((prev) => prev + 1);
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [feedback, showResultModal]);
+  }, [isLoading, feedback, showResultModal]);
 
   // Show hint after 10 seconds
   useEffect(() => {

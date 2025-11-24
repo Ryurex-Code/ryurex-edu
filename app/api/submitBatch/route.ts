@@ -7,6 +7,11 @@ interface GameResult {
   time_taken: number;
 }
 
+interface BatchRequest {
+  results: GameResult[];
+  mode?: 'practice' | 'spaced-repetition'; // 'practice' = no locking, 'spaced-repetition' = with locking
+}
+
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient();
@@ -21,7 +26,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { results } = await request.json() as { results: GameResult[] };
+    const { results, mode = 'spaced-repetition' } = await request.json() as BatchRequest;
 
     if (!Array.isArray(results) || results.length === 0) {
       return NextResponse.json(
@@ -30,7 +35,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log(`📦 Processing batch of ${results.length} results for user ${user.id}`);
+    console.log(`📦 Processing batch of ${results.length} results for user ${user.id} [mode: ${mode}]`);
 
     // Get today's date for comparison
     const todayStr = new Date().toISOString().split('T')[0];
@@ -66,11 +71,12 @@ export async function POST(request: NextRequest) {
       
       if (correct && time_taken < 10) {
         // FAST CORRECT (<10s) - User is fluent!
-        // Only increase fluency if it's the first time or next_due is today
-        if (isNextDueToday) {
+        // In PRACTICE mode: ALWAYS increase fluency
+        // In SPACED-REPETITION mode: Only increase if next_due is today (locked system)
+        if (mode === 'practice' || isNextDueToday) {
           fluencyChange = +1; // Gradual: +1 only
         } else {
-          fluencyChange = 0; // Don't increase fluency if not due today
+          fluencyChange = 0; // Don't increase fluency if not due today (locked)
         }
         
         const newFluency = Math.max(0, Math.min(10, currentProgress.fluency + fluencyChange));
@@ -148,7 +154,7 @@ export async function POST(request: NextRequest) {
         xpGain
       });
 
-      console.log(`  📝 vocab_id ${vocab_id}: ${correct ? '✅' : '❌'} in ${time_taken}s → fluency ${currentProgress.fluency}→${newFluency}${correct && !isNextDueToday && time_taken < 10 ? ' (locked, next_due not today)' : ''}, next_due: ${nextDueDate}, response_avg: ${newResponseAvg.toFixed(1)}s, XP: +${xpGain}`);
+      console.log(`  📝 vocab_id ${vocab_id}: ${correct ? '✅' : '❌'} in ${time_taken}s → fluency ${currentProgress.fluency}→${newFluency}${correct && !isNextDueToday && time_taken < 10 && mode === 'spaced-repetition' ? ' (locked, next_due not today)' : ''}, next_due: ${nextDueDate}, response_avg: ${newResponseAvg.toFixed(1)}s, XP: +${xpGain}`);
     }
 
     // Batch update all progress records
@@ -174,26 +180,36 @@ export async function POST(request: NextRequest) {
     }
 
     // Update user's total XP
-    const { error: xpError } = await supabase.rpc('increment_user_xp', {
-      user_id_input: user.id,
-      xp_amount: totalXpGained,
-    });
+    const { data: userData, error: userFetchError } = await supabase
+      .from('users')
+      .select('xp')
+      .eq('id', user.id)
+      .single();
 
-    if (xpError) {
-      console.error('❌ Error updating user XP:', xpError);
+    if (!userFetchError && userData) {
+      const newXp = (userData.xp || 0) + totalXpGained;
+      
+      const { error: xpError } = await supabase
+        .from('users')
+        .update({ xp: newXp })
+        .eq('id', user.id);
+
+      if (xpError) {
+        console.error('❌ Error updating user XP:', xpError);
+      }
     }
 
     // Update streak
-    const { data: userData, error: userFetchError } = await supabase
+    const { data: streakData, error: streakFetchError } = await supabase
       .from('users')
       .select('streak, last_activity_date')
       .eq('id', user.id)
       .single();
 
-    if (!userFetchError && userData) {
+    if (!streakFetchError && streakData) {
       const today = new Date().toISOString().split('T')[0];
-      const lastActivity = userData.last_activity_date;
-      let newStreak = userData.streak || 0;
+      const lastActivity = streakData.last_activity_date;
+      let newStreak = streakData.streak || 0;
 
       if (lastActivity) {
         const lastDate = new Date(lastActivity);
