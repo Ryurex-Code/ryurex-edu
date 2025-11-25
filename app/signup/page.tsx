@@ -53,7 +53,7 @@ export default function SignUpPage() {
         email,
         password,
         options: {
-          emailRedirectTo: `${location.origin}/auth/callback`,
+          emailRedirectTo: `${typeof window !== 'undefined' ? window.location.origin : process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`,
           data: {
             display_name: trimmedDisplayName,
           },

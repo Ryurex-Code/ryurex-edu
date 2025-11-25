@@ -139,7 +139,7 @@ CREATE TRIGGER update_user_vocab_progress_updated_at
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
-  INSERT INTO public.users (id, username, display_name, xp, level, streak)
+  INSERT INTO public.users (id, username, display_name, xp, streak)
   VALUES (
     NEW.id,
     COALESCE(NEW.raw_user_meta_data->>'username', split_part(NEW.email, '@', 1)),
@@ -149,7 +149,6 @@ BEGIN
       split_part(NEW.email, '@', 1)
     ),
     0,
-    1,
     0
   );
   RETURN NEW;
@@ -175,9 +174,6 @@ BEGIN
   UPDATE public.users
   SET 
     xp = xp + xp_amount,
-    -- Simple linear level: every 100 XP = 1 level
-    -- Level = floor(xp / 100) + 1
-    level = FLOOR((xp + xp_amount) / 100.0) + 1,
     updated_at = now()
   WHERE id = user_id_input;
 END;

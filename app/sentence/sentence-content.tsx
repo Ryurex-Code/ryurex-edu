@@ -29,7 +29,6 @@ export default function SentenceModeContent() {
 
   // Game state
   const [sentences, setSentences] = useState<SentenceWord[]>([]);
-  const [allAvailableSentences, setAllAvailableSentences] = useState<SentenceWord[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [userAnswer, setUserAnswer] = useState('');
   const [hintClickCount, setHintClickCount] = useState(0);
@@ -64,13 +63,11 @@ export default function SentenceModeContent() {
             console.log('📭 No sentences due today');
             if (isMounted) {
               setSentences([]);
-              setAllAvailableSentences([]);
             }
           } else {
             console.log(`✅ Setting ${data.words.length} sentences (max 10 per game)`);
             allSentences = data.words;
             if (isMounted) {
-              setAllAvailableSentences(allSentences);
               setSentences(allSentences.slice(0, 10));
             }
           }
@@ -78,14 +75,12 @@ export default function SentenceModeContent() {
           console.log(`✅ Setting ${data.sentences.length} sentences (max 10 per game)`);
           allSentences = data.sentences;
           if (isMounted) {
-            setAllAvailableSentences(allSentences);
             setSentences(allSentences.slice(0, 10));
           }
         } else {
           console.warn('⚠️ Unexpected data structure:', Object.keys(data));
           if (isMounted) {
             setSentences([]);
-            setAllAvailableSentences([]);
           }
         }
 
@@ -121,7 +116,6 @@ export default function SentenceModeContent() {
           alert('No sentences available today. Come back later!');
           router.push('/dashboard');
         } else {
-          setAllAvailableSentences(data.words);
           setSentences(data.words.slice(0, 10));
         }
       }
