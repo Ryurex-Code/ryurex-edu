@@ -6,6 +6,7 @@ import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import AnimatedBackground from '@/components/AnimatedBackground';
+import StructuredData from '@/components/StructuredData';
 
 export default function Home() {
   const features = [
@@ -33,6 +34,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-background text-foreground overflow-x-hidden">
+      <StructuredData />
       <AnimatedBackground />
       <div className="relative z-10">
         <Navbar />

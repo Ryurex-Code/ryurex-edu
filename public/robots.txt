@@ -1,0 +1,24 @@
+# robots.txt for Ryurex Edu
+User-agent: *
+Allow: /
+Allow: /login
+Allow: /signup
+Allow: /forgot-password
+
+# Disallow authenticated pages
+Disallow: /dashboard
+Disallow: /vocab
+Disallow: /sentence
+Disallow: /sentencelearning
+Disallow: /vocabgame
+Disallow: /category-menu
+Disallow: /update-password
+
+# Disallow API routes
+Disallow: /api/
+
+# Sitemap location
+Sitemap: https://ryurex-edu.vercel.app/sitemap.xml
+
+# Crawl delay
+Crawl-delay: 1

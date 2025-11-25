@@ -16,8 +16,45 @@ const poppins = Poppins({
 });
 
 export const metadata: Metadata = {
-  title: "Ryurex Edu Vocab Game - Level up your English vocabulary",
-  description: "An adaptive learning game that gets smarter as you do. Learn English vocabulary with gamification and spaced repetition.",
+  title: "Ryurex Edu - Master English Vocabulary The Smart Way",
+  description: "Learn English vocabulary through gamification, spaced repetition, and adaptive learning. Practice vocabulary with interactive lessons, earn XP, and track your progress.",
+  keywords: "English vocabulary, learn English, vocabulary learning app, spaced repetition, language learning, English learning game",
+  authors: [{ name: "Ryurex Edu" }],
+  creator: "Ryurex Edu",
+  metadataBase: new URL("https://ryurex-edu.vercel.app"),
+  alternates: {
+    canonical: "https://ryurex-edu.vercel.app",
+  },
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    url: "https://ryurex-edu.vercel.app",
+    siteName: "Ryurex Edu",
+    title: "Ryurex Edu - Master English Vocabulary The Smart Way",
+    description: "Learn English vocabulary through gamification, spaced repetition, and adaptive learning. Join thousands of learners!",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "Ryurex Edu - English Vocabulary Learning",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Ryurex Edu - Master English Vocabulary",
+    description: "Learn English vocabulary with gamification and spaced repetition",
+    images: ["/og-image.png"],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+    },
+  },
   icons: {
     icon: "/favicon.svg",
     apple: "/favicon.svg",
