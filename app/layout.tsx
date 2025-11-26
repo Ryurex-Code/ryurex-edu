@@ -34,9 +34,9 @@ export const metadata: Metadata = {
     description: "Learn English vocabulary through gamification, spaced repetition, and adaptive learning. Join thousands of learners!",
     images: [
       {
-        url: "/og-image.png",
-        width: 1200,
-        height: 630,
+        url: "/favicon.svg",
+        width: 200,
+        height: 200,
         alt: "Ryurex Edu - English Vocabulary Learning",
       },
     ],
@@ -45,7 +45,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Ryurex Edu - Master English Vocabulary",
     description: "Learn English vocabulary with gamification and spaced repetition",
-    images: ["/og-image.png"],
+    images: ["/favicon.svg"],
   },
   robots: {
     index: true,
