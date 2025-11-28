@@ -15,10 +15,11 @@ export async function GET() {
       );
     }
 
-    // Get all categories with count
-    const { data: categories, error: categoryError } = await supabase
+    // Get distinct categories with COUNT
+    // Using SQL to aggregate directly (more efficient than fetching all then processing)
+    const { data: categoryData, error: categoryError } = await supabase
       .from('vocab_master')
-      .select('category, id')
+      .select('category', { count: 'exact' })
       .order('category', { ascending: true });
 
     if (categoryError) {
@@ -29,25 +30,40 @@ export async function GET() {
       );
     }
 
-    // Count vocab per category
-    const categoryMap = new Map<string, { count: number; vocabIds: string[] }>();
-    categories?.forEach((item: { category: string; id: string }) => {
-      const existing = categoryMap.get(item.category) || { count: 0, vocabIds: [] };
-      existing.count += 1;
-      existing.vocabIds.push(item.id);
-      categoryMap.set(item.category, existing);
+    if (!categoryData || categoryData.length === 0) {
+      return NextResponse.json({
+        success: true,
+        categories: [],
+      });
+    }
+
+    // Get unique categories
+    const uniqueCategories = Array.from(new Set(categoryData.map(c => c.category)));
+
+    // Get vocab IDs per category and user progress in parallel
+    const categoryStatsPromises = uniqueCategories.map(async (cat) => {
+      // Get vocab IDs for this category
+      const { data: vocabData } = await supabase
+        .from('vocab_master')
+        .select('id')
+        .eq('category', cat);
+
+      const vocabIds = vocabData?.map(v => v.id) || [];
+      const count = vocabIds.length;
+
+      // Get learned count for this category
+      const { count: learnedCount } = await supabase
+        .from('user_vocab_progress')
+        .select('*', { count: 'exact' })
+        .eq('user_id', user.id)
+        .in('vocab_id', vocabIds)
+        .gt('fluency', 0);
+
+      return { category: cat, count, learnedCount: learnedCount || 0 };
     });
 
-    // Get user's learned words (fluency > 0)
-    const { data: progressData } = await supabase
-      .from('user_vocab_progress')
-      .select('vocab_id, fluency')
-      .eq('user_id', user.id)
-      .gt('fluency', 0);
+    const categoryStats = await Promise.all(categoryStatsPromises);
 
-    const learnedVocabIds = new Set(progressData?.map((p: { vocab_id: string }) => p.vocab_id) || []);
-
-    // Convert to array with icons and learned count
     const categoryIcons: { [key: string]: string } = {
       'Emotion': '😊',
       'Family': '👨‍👩‍👧‍👦',
@@ -62,15 +78,12 @@ export async function GET() {
       'Object': '📦',
     };
 
-    const formattedCategories = Array.from(categoryMap.entries()).map(([name, data]) => {
-      const learnedCount = data.vocabIds.filter(id => learnedVocabIds.has(id)).length;
-      return {
-        name,
-        count: data.count,
-        learned_count: learnedCount,
-        icon: categoryIcons[name] || '📚',
-      };
-    });
+    const formattedCategories = categoryStats.map(stat => ({
+      name: stat.category,
+      count: stat.count,
+      learned_count: stat.learnedCount,
+      icon: categoryIcons[stat.category] || '📚',
+    }));
 
     return NextResponse.json({
       success: true,

@@ -69,7 +69,7 @@ export async function GET() {
       );
     }
 
-    console.log('👥 All users data fetched:', allUsersData?.length || 0, 'users');
+    console.log('� All users data fetched:', allUsersData?.length || 0, 'users');
 
     const userRank =
       (allUsersData || []).findIndex((u) => u.id === user.id) + 1 || null;

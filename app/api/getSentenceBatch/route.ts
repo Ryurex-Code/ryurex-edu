@@ -38,72 +38,8 @@ export async function GET() {
 
     console.log(`🔍 Looking for sentences due today (${todayStr}) for user ${userId}`);
 
-    // Step 1: Get all vocab_master records with sentence_english
-    const { data: allVocabWithSentences, error: allVocabError } = await supabase
-      .from('vocab_master')
-      .select('id')
-      .not('sentence_english', 'is', null);
-
-    if (allVocabError) {
-      console.error('❌ Error fetching vocab with sentences:', allVocabError);
-      return NextResponse.json(
-        { error: 'Failed to fetch sentences', success: false },
-        { status: 500 }
-      );
-    }
-
-    const vocabIdsWithSentences = (allVocabWithSentences as Array<{ id: number }>).map(v => v.id);
-    console.log(`📊 Total vocab with sentence_english: ${vocabIdsWithSentences.length}`);
-
-    // Step 2: Get user's progress for these vocab
+    // Step 1: Get user's progress records
     const { data: userProgress, error: progressError } = await supabase
-      .from('user_vocab_progress')
-      .select(`
-        vocab_id,
-        fluency_sentence,
-        next_due_sentence
-      `)
-      .eq('user_id', userId)
-      .in('vocab_id', vocabIdsWithSentences);
-
-    if (progressError) {
-      console.error('❌ Error fetching user progress:', progressError);
-      return NextResponse.json(
-        { error: 'Failed to fetch progress', success: false },
-        { status: 500 }
-      );
-    }
-
-    // Step 3: Identify missing vocab IDs (not yet initialized for this user)
-    const existingVocabIds = new Set((userProgress as Array<{ vocab_id: number }>).map(p => p.vocab_id));
-    const missingVocabIds = vocabIdsWithSentences.filter(id => !existingVocabIds.has(id));
-
-    console.log(`📋 User has progress for: ${existingVocabIds.size} vocab, missing: ${missingVocabIds.length}`);
-
-    // Step 4: Initialize missing vocab (create progress records with fluency_sentence = 0, next_due_sentence = today)
-    if (missingVocabIds.length > 0) {
-      const { error: initError } = await supabase
-        .from('user_vocab_progress')
-        .insert(
-          missingVocabIds.map(vocabId => ({
-            user_id: userId,
-            vocab_id: vocabId,
-            fluency_sentence: 0,
-            next_due_sentence: todayStr,
-            fluency: 0,
-            next_due: todayStr,
-          }))
-        );
-
-      if (initError && !initError.message.includes('duplicate')) {
-        console.warn('⚠️ Warning initializing new progress:', initError);
-      } else {
-        console.log(`✅ Initialized ${missingVocabIds.length} new sentence records`);
-      }
-    }
-
-    // Step 5: Now fetch ALL sentences due today with their full data
-    const { data: userProgress2, error: progressError2 } = await supabase
       .from('user_vocab_progress')
       .select(`
         vocab_id,
@@ -121,27 +57,26 @@ export async function GET() {
         )
       `)
       .eq('user_id', userId)
-      .in('vocab_id', vocabIdsWithSentences)
       .lte('next_due_sentence', todayStr)
       .order('next_due_sentence', { ascending: true })
       .order('fluency_sentence', { ascending: true });
 
-    if (progressError2) {
-      console.error('❌ Error fetching sentence batch:', progressError2);
+    if (progressError) {
+      console.error('❌ Error fetching user progress:', progressError);
       return NextResponse.json(
         { error: 'Failed to fetch sentences', success: false },
         { status: 500 }
       );
     }
 
-    console.log(`📊 Raw data from DB: ${(userProgress2 || []).length} records found`);
-    (userProgress2 || []).forEach((p: UserProgressRow, idx: number) => {
+    console.log(`📊 Raw data from DB: ${(userProgress || []).length} records found`);
+    (userProgress || []).forEach((p: UserProgressRow, idx: number) => {
       const vocab = p.vocab_master instanceof Array ? p.vocab_master[0] : p.vocab_master;
       console.log(`  [${idx}] vocab_id=${p.vocab_id}, next_due_sentence=${p.next_due_sentence}, has_sentence=${!!vocab?.sentence_english}`);
     });
 
-    // Step 6: Filter out records where sentence_english is null
-    const filteredProgress = (userProgress2 || []).filter((progress: UserProgressRow) => {
+    // Step 2: Filter out records where sentence_english is null
+    const filteredProgress = (userProgress || []).filter((progress: UserProgressRow) => {
       const vocab = progress.vocab_master instanceof Array ? progress.vocab_master[0] : progress.vocab_master;
       return vocab && vocab.sentence_english !== null && vocab.sentence_english !== undefined;
     });

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CheckCircle2, XCircle, Lightbulb, ArrowLeft, RotateCcw, Home } from 'lucide-react';
+import { CheckCircle2, XCircle, Lightbulb, ArrowLeft, RotateCcw, Home, ChevronRight } from 'lucide-react';
 import ThemeToggle from '@/components/ThemeToggle';
 
 interface SentenceWord {
@@ -41,6 +41,7 @@ export default function SentenceLearningContent() {
   const [isLoading, setIsLoading] = useState(true);
   const [showResultModal, setShowResultModal] = useState(false);
   const [isSubmittingResults, setIsSubmittingResults] = useState(false);
+  const [hasNextPart, setHasNextPart] = useState(false);
 
   // Reset all game state when category or subcategory changes
   useEffect(() => {
@@ -54,6 +55,7 @@ export default function SentenceLearningContent() {
     setIsLoading(true);
     setShowResultModal(false);
     setIsSubmittingResults(false);
+    setHasNextPart(false);
   }, [category, subcategory]);
 
   // Fetch sentences on mount - REQUIRED category and subcategory
@@ -207,6 +209,25 @@ export default function SentenceLearningContent() {
 
       const data = await response.json();
       console.log('✅ Batch submission success:', data);
+
+      // Check if next part exists before showing modal
+      try {
+        const nextSubcategory = parseInt(String(subcategory)) + 1;
+        const checkResponse = await fetch(`/api/subcategories?category=${encodeURIComponent(category || '')}`);
+        
+        if (checkResponse.ok) {
+          const checkData = await checkResponse.json();
+          const nextPartExists = checkData.subcategories?.some(
+            (sub: { subcategory: number; sentence_count?: number; word_count?: number }) => 
+              sub.subcategory === nextSubcategory && (sub.sentence_count || 0) > 0
+          );
+          setHasNextPart(!!nextPartExists);
+          console.log('Next part exists:', nextPartExists);
+        }
+      } catch (error) {
+        console.error('Error checking next part:', error);
+        setHasNextPart(false);
+      }
 
       setShowResultModal(true);
     } catch (error) {
@@ -524,14 +545,23 @@ export default function SentenceLearningContent() {
         <ResultModal
           results={gameResults}
           category={category || ''}
+          subcategory={subcategory || ''}
+          hasNextPart={hasNextPart}
           onClose={() => router.push(`/category-menu/${category}`)}
           onPlayAgain={() => {
             setShowResultModal(false);
             setIsLoading(true);
             setCurrentIndex(0);
             setGameResults([]);
+            setHasNextPart(false);
             resetQuestion();
             fetchSentences();
+          }}
+          onNextPart={(nextSubcategory) => {
+            setShowResultModal(false);
+            setIsLoading(true);
+            const url = `/sentencelearning?category=${encodeURIComponent(category || '')}&subcategory=${nextSubcategory}`;
+            window.location.href = url;
           }}
         />
       )}
@@ -542,13 +572,19 @@ export default function SentenceLearningContent() {
 // Result Modal Component
 function ResultModal({
   results,
+  subcategory,
+  hasNextPart,
   onClose,
   onPlayAgain,
+  onNextPart,
 }: {
   results: GameResult[];
   category: string;
+  subcategory: string | number;
+  hasNextPart: boolean;
   onClose: () => void;
   onPlayAgain: () => void;
+  onNextPart: (nextSubcategory: number) => void;
 }) {
   const correctCount = results.filter((r) => r.correct).length;
   const accuracy = ((correctCount / results.length) * 100).toFixed(0);
@@ -627,6 +663,25 @@ function ResultModal({
               className="p-4 bg-primary-yellow text-black rounded-full hover:bg-primary-yellow-hover hover:scale-110 transition-all shadow-lg cursor-pointer"
             >
               <RotateCcw className="w-6 h-6" />
+            </button>
+
+            {/* Next Part */}
+            <button
+              onClick={() => {
+                if (hasNextPart) {
+                  const nextSubcategory = parseInt(String(subcategory)) + 1;
+                  onNextPart(nextSubcategory);
+                }
+              }}
+              disabled={!hasNextPart}
+              title={hasNextPart ? "Next Part" : "No more parts available"}
+              className={`p-4 rounded-full border-2 transition-all shadow-lg ${
+                hasNextPart
+                  ? 'cursor-pointer hover:scale-110 bg-card border-primary-yellow text-primary-yellow hover:bg-primary-yellow/10'
+                  : 'cursor-not-allowed opacity-50 bg-card border-gray-600 text-gray-600'
+              }`}
+            >
+              <ChevronRight className="w-6 h-6" />
             </button>
 
             {/* Back to Menu */}

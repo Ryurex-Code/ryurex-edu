@@ -123,7 +123,7 @@ export default function DashboardPage() {
   return (
     <div className="flex flex-col min-h-screen bg-background text-foreground">
       {/* Navbar */}
-      <nav className="sticky top-0 z-40 bg-card">
+      <nav className="fixed top-0 left-0 right-0 z-40 bg-card border-b border-theme">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             {/* Logo/Brand */}
@@ -162,17 +162,20 @@ export default function DashboardPage() {
               </button>
             </div>
 
-            {/* Mobile Menu Button */}
-            <button
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="md:hidden p-2 hover:bg-theme rounded-lg transition-colors cursor-pointer"
-            >
-              {isMobileMenuOpen ? (
-                <X className="w-6 h-6" />
-              ) : (
-                <Menu className="w-6 h-6" />
-              )}
-            </button>
+            {/* Mobile Menu - Theme Toggle + Menu Button */}
+            <div className="md:hidden flex items-center gap-3">
+              <ThemeToggle />
+              <button
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                className="p-2 hover:bg-theme rounded-lg transition-colors cursor-pointer"
+              >
+                {isMobileMenuOpen ? (
+                  <X className="w-6 h-6" />
+                ) : (
+                  <Menu className="w-6 h-6" />
+                )}
+              </button>
+            </div>
           </div>
 
           {/* Mobile Menu */}
@@ -182,26 +185,23 @@ export default function DashboardPage() {
             transition={{ duration: 0.3 }}
             className="md:hidden overflow-hidden"
           >
-            <div className="px-4 py-4 space-y-3">
+            <div className="px-4 py-4 space-y-3 border-t border-theme">
               <button
                 onClick={() => {
                   setIsEditModalOpen(true);
                   setIsMobileMenuOpen(false);
                 }}
-                className="w-full flex items-center gap-2 px-4 py-2 text-sm font-medium text-foreground hover:text-primary-yellow transition-colors cursor-pointer"
+                className="w-full flex items-center gap-2 px-4 py-2 text-sm font-medium text-foreground hover:text-primary-yellow transition-colors cursor-pointer rounded-lg hover:bg-theme"
               >
+                <Edit2 className="w-4 h-4" />
                 <span>Edit Name</span>
               </button>
-              <div className="flex items-center justify-between px-4 py-2">
-                <span className="text-sm font-medium">Theme</span>
-                <ThemeToggle />
-              </div>
               <button
                 onClick={() => {
                   handleLogout();
                   setIsMobileMenuOpen(false);
                 }}
-                className="w-full flex items-center gap-2 px-4 py-2 bg-red-500/10 border border-red-500/20 text-red-400 rounded-lg hover:bg-red-500/20 transition-colors text-sm cursor-pointer"
+                className="w-full flex items-center gap-2 px-4 py-2 bg-red-500/10 border border-red-500/20 text-red-400 rounded-lg hover:bg-red-500/20 transition-colors text-sm font-medium cursor-pointer"
               >
                 <LogOut className="w-4 h-4" />
                 <span>Logout</span>
@@ -211,8 +211,8 @@ export default function DashboardPage() {
         </div>
       </nav>
 
-      {/* Main Content */}
-      <div className="flex-1 py-12 px-4 sm:px-6 lg:px-8">
+      {/* Main Content - Add padding-top untuk navbar fixed */}
+      <div className="flex-1 py-12 px-4 sm:px-6 lg:px-8 mt-16">
         <div className="max-w-7xl mx-auto">
           {/* Welcome Section */}
           <motion.div

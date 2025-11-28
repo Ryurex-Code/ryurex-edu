@@ -40,83 +40,96 @@ export async function GET(request: Request) {
     console.log('=== VOCAB BATCH DEBUG ===');
     console.log(`📅 Today's date: ${today}`);
 
-    // Get words that are due for review (ONLY words due today)
-    let progressQuery = supabase
+    // Step 1: Get progress records due today (indexed query - fast)
+    const progressQuery = supabase
       .from('user_vocab_progress')
-      .select(`
-        vocab_id,
-        fluency,
-        next_due,
-        vocab_master (
-          id,
-          indo,
-          english,
-          class,
-          category,
-          subcategory
-        )
-      `)
+      .select('vocab_id, fluency, next_due')
       .eq('user_id', user.id)
       .lte('next_due', today)
       .order('next_due', { ascending: true })
       .order('fluency', { ascending: true })
       .limit(10);
 
-    // Apply category filter if provided
-    if (categoryFilter) {
-      console.log(`🎯 Filtering by category: ${categoryFilter}`);
-      progressQuery = progressQuery.eq('vocab_master.category', categoryFilter);
-    }
-
-    // Apply subcategory filter if provided
-    if (subcategoryFilter) {
-      console.log(`📊 Filtering by subcategory: ${subcategoryFilter}`);
-      progressQuery = progressQuery.eq('vocab_master.subcategory', parseInt(subcategoryFilter));
-    }
-
     const { data: progressWords, error: progressError } = await progressQuery;
 
     if (progressError) {
       console.error('❌ Error fetching progress words:', progressError);
+      return NextResponse.json(
+        { error: 'Failed to fetch vocabulary' },
+        { status: 500 }
+      );
     }
 
-    const words = progressWords || [];
-
-    console.log(`✅ Found ${words.length} words due for review today`);
-    
-    if (words.length > 0) {
-      console.log('📝 Review words:');
-      words.forEach((w: unknown, idx: number) => {
-        const word = w as { vocab_master?: { indo: string }; next_due: string; fluency: number };
-        console.log(`  ${idx + 1}. ${word.vocab_master?.indo} (next_due: ${word.next_due}, fluency: ${word.fluency})`);
+    if (!progressWords || progressWords.length === 0) {
+      console.log('✅ No words due for review today');
+      return NextResponse.json({
+        success: true,
+        words: [],
+        count: 0,
       });
     }
 
-    // NEW BEHAVIOR: Only return words that are due today
-    // Do NOT fetch new words if less than 10
-    // Let the user know there are no more words to review today
-    
-    console.log(`📊 Final batch: ${words.length} words (review due today only)`);
+    const vocabIds = progressWords.map(p => p.vocab_id);
+    console.log(`✅ Found ${vocabIds.length} words due for review today`);
 
-    // Format response
-    const formattedWords = words.map((item: unknown) => {
-      const word = item as { vocab_master?: { id: number; indo: string; english: string; class: string; category: string; subcategory: number }; vocab_id: number; fluency: number; next_due: string };
-      return {
-        vocab_id: word.vocab_master?.id || word.vocab_id,
-        indo: word.vocab_master?.indo,
-        english: word.vocab_master?.english,
-        class: word.vocab_master?.class,
-        category: word.vocab_master?.category,
-        subcategory: word.vocab_master?.subcategory,
-        fluency: word.fluency,
-        next_due: word.next_due,
-      };
-    });
+    // Step 2: Get vocab_master data for these IDs (fast - indexed query)
+    // eslint-disable-next-line prefer-const
+    let vocabQuery = supabase
+      .from('vocab_master')
+      .select('id, indo, english, class, category, subcategory')
+      .in('id', vocabIds);
+
+    // Apply filters if provided
+    if (categoryFilter) {
+      console.log(`🎯 Filtering by category: ${categoryFilter}`);
+      vocabQuery = vocabQuery.eq('category', categoryFilter);
+    }
+
+    if (subcategoryFilter) {
+      console.log(`📊 Filtering by subcategory: ${subcategoryFilter}`);
+      vocabQuery = vocabQuery.eq('subcategory', parseInt(subcategoryFilter));
+    }
+
+    const { data: vocabData, error: vocabError } = await vocabQuery;
+
+    if (vocabError) {
+      console.error('❌ Error fetching vocab data:', vocabError);
+      return NextResponse.json(
+        { error: 'Failed to fetch vocabulary' },
+        { status: 500 }
+      );
+    }
+
+    // Step 3: Create lookup maps for O(1) merge
+    const vocabMap = new Map(vocabData?.map(v => [v.id, v]) || []);
+    const progressMap = new Map(progressWords.map(p => [p.vocab_id, p]) || []);
+
+    // Step 4: Merge data in memory (skip filtered-out vocab)
+    const words = vocabIds
+      .map(vocabId => {
+        const vocab = vocabMap.get(vocabId);
+        const progress = progressMap.get(vocabId);
+        if (!vocab) return null; // Skip if vocab was filtered out
+        
+        return {
+          vocab_id: vocab.id,
+          indo: vocab.indo,
+          english: vocab.english,
+          class: vocab.class,
+          category: vocab.category,
+          subcategory: vocab.subcategory,
+          fluency: progress?.fluency || 0,
+          next_due: progress?.next_due || today,
+        };
+      })
+      .filter(Boolean);
+
+    console.log(`📊 Final batch: ${words.length} words (after filters)`);
 
     return NextResponse.json({
       success: true,
-      words: formattedWords,
-      count: formattedWords.length,
+      words,
+      count: words.length,
     });
 
   } catch (error: Error | unknown) {

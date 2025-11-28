@@ -639,7 +639,7 @@ export default function VocabGameContent() {
           results={gameResults}
           subcategory={subcategory || ''}
           hasNextPart={hasNextPart}
-          onClose={() => router.push('/dashboard')}
+          onClose={() => router.push(`/category-menu/${category}`)}
           onPlayAgain={() => {
             setShowResultModal(false);
             setIsLoading(true);
