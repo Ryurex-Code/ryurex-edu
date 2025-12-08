@@ -13,6 +13,16 @@ interface ResultData {
   hostScore: number;
   joinedScore: number;
   winner: 'host' | 'joined' | 'tie';
+  hostStats?: {
+    correctAnswers: number;
+    totalQuestions: number;
+    avgTimeMs: number;
+  } | null;
+  joinedStats?: {
+    correctAnswers: number;
+    totalQuestions: number;
+    avgTimeMs: number;
+  } | null;
 }
 
 export default function PvPResultPage() {
@@ -85,6 +95,28 @@ export default function PvPResultPage() {
           joinedName = joinedData?.display_name || 'Unknown';
         }
 
+        // Fetch game stats for both players from lobby table
+        let hostStats = null;
+        let joinedStats = null;
+
+        // Get host stats from lobby
+        if (lobby.host_total_questions > 0) {
+          hostStats = {
+            correctAnswers: lobby.host_correct_answers,
+            totalQuestions: lobby.host_total_questions,
+            avgTimeMs: lobby.host_avg_time_per_question_ms,
+          };
+        }
+
+        // Get joined stats from lobby
+        if (lobby.joined_total_questions > 0) {
+          joinedStats = {
+            correctAnswers: lobby.joined_correct_answers,
+            totalQuestions: lobby.joined_total_questions,
+            avgTimeMs: lobby.joined_avg_time_per_question_ms,
+          };
+        }
+
         // Determine winner
         let winner: 'host' | 'joined' | 'tie' = 'tie';
         if (lobby.host_score > lobby.joined_score) {
@@ -105,6 +137,8 @@ export default function PvPResultPage() {
           hostScore: lobby.host_score || 0,
           joinedScore: lobby.joined_score || 0,
           winner,
+          hostStats,
+          joinedStats,
         });
 
         setIsLoading(false);
@@ -158,189 +192,220 @@ export default function PvPResultPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Theme Toggle */}
-      <div className="fixed bottom-6 right-6 z-50">
-        <ThemeToggle />
-      </div>
-
-      {/* Header */}
+      {/* Header - Minimalist */}
       <div className="border-b border-text-secondary/10">
-        <div className="max-w-4xl mx-auto px-4 py-8">
-          <div className="text-center">
-            <motion.h1
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="text-4xl md:text-5xl font-bold mb-2"
-            >
-              {isDraw ? (
-                <span className="text-primary-yellow">It&apos;s a Draw!</span>
-              ) : isUserWinner ? (
-                <span className="text-green-400">🎉 You Won! 🎉</span>
-              ) : (
-                <span className="text-gray-400">Game Over</span>
-              )}
-            </motion.h1>
-            <p className="text-text-secondary">
-              Battle Complete - Final Results
-            </p>
+        <div className="max-w-full mx-auto px-3 sm:px-4 py-3 sm:py-4 flex items-center justify-between">
+          <div className="flex-1" />
+          <p className="text-text-secondary text-center text-label flex-1">
+            Battle Complete - Final Results
+          </p>
+          <div className="flex-1 flex justify-end">
+            <ThemeToggle />
           </div>
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="max-w-4xl mx-auto px-4 py-12">
-        {/* Winner Icon Animation */}
-        {isUserWinner && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.3 }}
-            className="flex justify-center mb-12"
-          >
-            <motion.div
-              animate={{ rotate: [0, 10, -10, 0] }}
-              transition={{ duration: 2, repeat: Infinity }}
-              className="text-7xl"
-            >
-              🏆
-            </motion.div>
-          </motion.div>
-        )}
-
-        {/* Scoreboard */}
+      {/* Main Content - Match Style */}
+      <div className="max-w-2xl mx-auto px-3 sm:px-4 py-8 sm:py-12">
+        {/* Score Section - Highlighted with Yellow Background */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12"
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="bg-primary-yellow rounded-2xl p-6 sm:p-8 mb-8"
         >
-          {/* Host Score Card */}
-          <div
-            className={`rounded-3xl p-8 border-2 transition-all ${
-              resultData.winner === 'host'
-                ? 'bg-primary-yellow/10 border-primary-yellow shadow-lg shadow-primary-yellow/20'
-                : 'bg-card border-text-secondary/10'
-            }`}
-          >
-            <div className="text-center space-y-4">
-              {resultData.winner === 'host' && (
-                <div className="flex justify-center mb-4">
-                  <Trophy className="w-8 h-8 text-primary-yellow" />
-                </div>
-              )}
-              <p className="text-text-secondary text-sm">
-                {userRole === 'host' ? 'You' : 'Opponent'}
-              </p>
-              <h2 className="text-3xl font-bold text-text-primary">
+          <div className="flex items-center justify-between gap-4">
+            {/* Host Score */}
+            <div className="flex-1 text-center">
+              <h2 className="text-body-lg text-black mb-3 truncate font-black">
                 {resultData.hostName}
               </h2>
-              <div className="text-5xl font-bold text-primary-yellow">
+              <div className="text-heading-1 font-black text-black mb-2">
                 {resultData.hostScore}
               </div>
-              {resultData.winner === 'host' && (
-                <p className="text-primary-yellow font-semibold">Winner</p>
-              )}
             </div>
-          </div>
 
-          {/* Joined Score Card */}
-          <div
-            className={`rounded-3xl p-8 border-2 transition-all ${
-              resultData.winner === 'joined'
-                ? 'bg-primary-yellow/10 border-primary-yellow shadow-lg shadow-primary-yellow/20'
-                : 'bg-card border-text-secondary/10'
-            }`}
-          >
-            <div className="text-center space-y-4">
-              {resultData.winner === 'joined' && (
-                <div className="flex justify-center mb-4">
-                  <Trophy className="w-8 h-8 text-primary-yellow" />
-                </div>
-              )}
-              <p className="text-text-secondary text-sm">
-                {userRole === 'joined' ? 'You' : 'Opponent'}
-              </p>
-              <h2 className="text-3xl font-bold text-text-primary">
+            {/* VS Divider */}
+            <div className="flex flex-col items-center gap-2">
+              <p className="text-lg sm:text-2xl font-black text-black">VS</p>
+              {/* Result Indicator */}
+              <div className="text-sm font-bold px-2 py-1 rounded bg-black/10 text-black">
+                {isDraw ? '🤝 Draw' : ''}
+              </div>
+            </div>
+
+            {/* Joined Score */}
+            <div className="flex-1 text-center">
+              <h2 className="text-body-lg text-black mb-3 truncate font-black">
                 {resultData.joinedName}
               </h2>
-              <div className="text-5xl font-bold text-primary-yellow">
+              <div className="text-heading-1 font-black text-black mb-2">
                 {resultData.joinedScore}
               </div>
-              {resultData.winner === 'joined' && (
-                <p className="text-primary-yellow font-semibold">Winner</p>
-              )}
             </div>
           </div>
         </motion.div>
 
-        {/* Score Difference */}
-        {!isDraw && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.2 }}
-            className="text-center mb-12"
-          >
-            <p className="text-text-secondary">
-              Score Difference:{' '}
-              <span className="text-primary-yellow font-bold text-lg">
-                {Math.abs(resultData.hostScore - resultData.joinedScore)} points
-              </span>
-            </p>
-          </motion.div>
-        )}
-
-        {/* Stats */}
+        {/* Stats Rows - Like Match Stats with 3-column layout */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="bg-card rounded-2xl p-8 border border-text-secondary/10 mb-12"
+          transition={{ delay: 0.1 }}
+          className="bg-primary-yellow rounded-2xl overflow-hidden mb-8 space-y-0"
         >
-          <h3 className="text-2xl font-bold mb-6">Battle Statistics</h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="bg-background rounded-lg p-4">
-              <p className="text-text-secondary text-sm">Your Score</p>
-              <p className="text-2xl font-bold text-primary-yellow">
-                {userRole === 'host'
-                  ? resultData.hostScore
-                  : resultData.joinedScore}
-              </p>
+          {/* Accuracy */}
+          <div className="px-4 sm:px-6 py-4 flex justify-between items-center gap-3">
+            <div className="flex-1 flex justify-start">
+              <div className={`${
+                (resultData.hostStats ? ((resultData.hostStats.correctAnswers / resultData.hostStats.totalQuestions) * 100) : 0) > 
+                (resultData.joinedStats ? ((resultData.joinedStats.correctAnswers / resultData.joinedStats.totalQuestions) * 100) : 0)
+                  ? 'bg-black rounded px-2 py-1'
+                  : ''
+              }`}>
+                <span className={`text-heading-3 font-bold ${
+                  (resultData.hostStats ? ((resultData.hostStats.correctAnswers / resultData.hostStats.totalQuestions) * 100) : 0) > 
+                  (resultData.joinedStats ? ((resultData.joinedStats.correctAnswers / resultData.joinedStats.totalQuestions) * 100) : 0)
+                    ? 'text-primary-yellow'
+                    : 'text-black'
+                }`}>
+                  {resultData.hostStats 
+                    ? ((resultData.hostStats.correctAnswers / resultData.hostStats.totalQuestions) * 100).toFixed(1)
+                    : '0'}%
+                </span>
+              </div>
             </div>
-            <div className="bg-background rounded-lg p-4">
-              <p className="text-text-secondary text-sm">Opponent Score</p>
-              <p className="text-2xl font-bold text-primary-yellow">
-                {userRole === 'host'
-                  ? resultData.joinedScore
-                  : resultData.hostScore}
-              </p>
-            </div>
-            <div className="bg-background rounded-lg p-4">
-              <p className="text-text-secondary text-sm">Status</p>
-              <p className="text-2xl font-bold text-secondary-purple capitalize">
-                Finished
-              </p>
-            </div>
-            <div className="bg-background rounded-lg p-4">
-              <p className="text-text-secondary text-sm">Result</p>
-              <p className="text-2xl font-bold text-green-400">
-                {isDraw ? 'Draw' : isUserWinner ? 'Win' : 'Loss'}
-              </p>
+            <span className="text-black text-body-lg font-bold flex-1 text-center">
+              Accuracy
+            </span>
+            <div className="flex-1 flex justify-end">
+              <div className={`${
+                (resultData.joinedStats ? ((resultData.joinedStats.correctAnswers / resultData.joinedStats.totalQuestions) * 100) : 0) > 
+                (resultData.hostStats ? ((resultData.hostStats.correctAnswers / resultData.hostStats.totalQuestions) * 100) : 0)
+                  ? 'bg-black rounded px-2 py-1'
+                  : ''
+              }`}>
+                <span className={`text-heading-3 font-bold ${
+                  (resultData.joinedStats ? ((resultData.joinedStats.correctAnswers / resultData.joinedStats.totalQuestions) * 100) : 0) > 
+                  (resultData.hostStats ? ((resultData.hostStats.correctAnswers / resultData.hostStats.totalQuestions) * 100) : 0)
+                    ? 'text-primary-yellow'
+                    : 'text-black'
+                }`}>
+                  {resultData.joinedStats
+                    ? ((resultData.joinedStats.correctAnswers / resultData.joinedStats.totalQuestions) * 100).toFixed(1)
+                    : '0'}%
+                </span>
+              </div>
             </div>
           </div>
+
+          {/* Avg Time */}
+          <div className="px-4 sm:px-6 py-4 flex justify-between items-center gap-3">
+            <div className="flex-1 flex justify-start">
+              <div className={`${
+                (resultData.hostStats?.avgTimeMs ?? 0) < (resultData.joinedStats?.avgTimeMs ?? Infinity)
+                  ? 'bg-black rounded px-2 py-1'
+                  : ''
+              }`}>
+                <span className={`text-heading-3 font-bold ${
+                  (resultData.hostStats?.avgTimeMs ?? 0) < (resultData.joinedStats?.avgTimeMs ?? Infinity)
+                    ? 'text-primary-yellow'
+                    : 'text-black'
+                }`}>
+                  {resultData.hostStats?.avgTimeMs 
+                    ? (resultData.hostStats.avgTimeMs / 1000).toFixed(1) 
+                    : '0'}s
+                </span>
+              </div>
+            </div>
+            <span className="text-black text-body-lg font-bold flex-1 text-center">
+              Avg Time
+            </span>
+            <div className="flex-1 flex justify-end">
+              <div className={`${
+                (resultData.joinedStats?.avgTimeMs ?? Infinity) < (resultData.hostStats?.avgTimeMs ?? 0)
+                  ? 'bg-black rounded px-2 py-1'
+                  : ''
+              }`}>
+                <span className={`text-heading-3 font-bold ${
+                  (resultData.joinedStats?.avgTimeMs ?? Infinity) < (resultData.hostStats?.avgTimeMs ?? 0)
+                    ? 'text-primary-yellow'
+                    : 'text-black'
+                }`}>
+                  {resultData.joinedStats?.avgTimeMs 
+                    ? (resultData.joinedStats.avgTimeMs / 1000).toFixed(1) 
+                    : '0'}s
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Answered */}
+          <div className="px-4 sm:px-6 py-4 flex justify-between items-center gap-3 border-b border-black/20">
+            <div className="flex-1 flex justify-start">
+              <div className={`${
+                (resultData.hostStats?.correctAnswers ?? 0) > (resultData.joinedStats?.correctAnswers ?? 0)
+                  ? 'bg-black rounded px-2 py-1'
+                  : ''
+              }`}>
+                <span className={`text-heading-3 font-bold ${
+                  (resultData.hostStats?.correctAnswers ?? 0) > (resultData.joinedStats?.correctAnswers ?? 0)
+                    ? 'text-primary-yellow'
+                    : 'text-black'
+                }`}>
+                  {resultData.hostStats?.correctAnswers || 0} / {resultData.hostStats?.totalQuestions || 0}
+                </span>
+              </div>
+            </div>
+            <span className="text-black text-body-lg font-bold flex-1 text-center">
+              Answered
+            </span>
+            <div className="flex-1 flex justify-end">
+              <div className={`${
+                (resultData.joinedStats?.correctAnswers ?? 0) > (resultData.hostStats?.correctAnswers ?? 0)
+                  ? 'bg-black rounded px-2 py-1'
+                  : ''
+              }`}>
+                <span className={`text-heading-3 font-bold ${
+                  (resultData.joinedStats?.correctAnswers ?? 0) > (resultData.hostStats?.correctAnswers ?? 0)
+                    ? 'text-primary-yellow'
+                    : 'text-black'
+                }`}>
+                  {resultData.joinedStats?.correctAnswers || 0} / {resultData.joinedStats?.totalQuestions || 0}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Result Status - Full Width Bottom */}
+          <div className={`w-full px-4 sm:px-6 py-4 text-center font-black text-heading-3 ${
+            isDraw 
+              ? 'bg-black/10 text-black' 
+              : isUserWinner 
+                ? 'bg-green-600 text-white' 
+                : 'bg-red-600 text-white'
+          }`}>
+            {isDraw ? 'Draw' : isUserWinner ? 'Win' : 'Lose'}
+          </div>
         </motion.div>
+
+        {/* Divider Line */}
+        <motion.div
+          initial={{ scaleX: 0 }}
+          animate={{ scaleX: 1 }}
+          transition={{ delay: 0.2 }}
+          className="h-0.5 bg-gradient-to-r from-text-secondary/20 via-primary-yellow to-text-secondary/20 mb-8 origin-center"
+        />
 
         {/* Action Buttons */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
-          className="flex flex-col sm:flex-row gap-4 justify-center"
+          className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center"
         >
           {/* Play Again */}
           <button
             onClick={() => router.push('/pvp/create')}
-            className="flex items-center justify-center gap-2 px-8 py-4 bg-secondary-purple text-white rounded-xl font-bold hover:scale-105 transition-transform cursor-pointer"
+            className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-6 sm:px-8 py-3 sm:py-4 bg-secondary-purple text-white rounded-xl sm:rounded-2xl font-bold text-body-lg hover:bg-secondary-purple/90 transition-all cursor-pointer"
           >
             <RotateCcw className="w-5 h-5" />
             Play Again
@@ -349,7 +414,7 @@ export default function PvPResultPage() {
           {/* Back to Menu */}
           <button
             onClick={() => router.push('/pvp')}
-            className="flex items-center justify-center gap-2 px-8 py-4 bg-primary-yellow text-black rounded-xl font-bold hover:scale-105 transition-transform cursor-pointer"
+            className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-6 sm:px-8 py-3 sm:py-4 bg-primary-yellow text-black rounded-xl sm:rounded-2xl font-bold text-body-lg hover:bg-primary-yellow-hover transition-all cursor-pointer"
           >
             <Home className="w-5 h-5" />
             Back to Menu

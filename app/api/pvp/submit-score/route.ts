@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { lobbyId, playerRole, finalScore } = await request.json();
+    const { lobbyId, playerRole, finalScore, gameStats } = await request.json();
 
     if (!lobbyId || !playerRole || finalScore === undefined) {
       return NextResponse.json(
@@ -52,28 +52,43 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Update lobby with score
-    const updateData =
-      playerRole === 'host'
-        ? { host_score: finalScore }
-        : { joined_score: finalScore };
+    // Prepare update data with stats if provided
+    const updateData: any = {
+      ...(playerRole === 'host' ? { host_score: finalScore } : { joined_score: finalScore }),
+    };
 
+    // Add stats to update data if provided
+    if (gameStats) {
+      const prefix = playerRole === 'host' ? 'host' : 'joined';
+      updateData[`${prefix}_total_questions`] = gameStats.totalQuestions;
+      updateData[`${prefix}_correct_answers`] = gameStats.correctAnswers;
+      updateData[`${prefix}_wrong_answers`] = gameStats.wrongAnswers;
+      updateData[`${prefix}_accuracy_percent`] = gameStats.accuracyPercent;
+      updateData[`${prefix}_total_time_ms`] = gameStats.totalTimeMs;
+      updateData[`${prefix}_avg_time_per_question_ms`] = gameStats.avgTimePerQuestionMs;
+      updateData[`${prefix}_fastest_answer_ms`] = gameStats.fastestAnswerMs;
+      updateData[`${prefix}_slowest_answer_ms`] = gameStats.slowestAnswerMs;
+    }
+
+    // Update lobby with score and stats
     const { error: updateError } = await supabase
       .from('pvp_lobbies')
       .update(updateData)
       .eq('id', lobbyId);
 
     if (updateError) {
-      console.error('Error updating score:', updateError);
+      console.error('Error updating score and stats:', updateError);
       return NextResponse.json(
         { error: 'Failed to submit score' },
         { status: 500 }
       );
     }
 
+    console.log('✅ Score and stats submitted:', { finalScore, gameStats });
+
     return NextResponse.json({
       success: true,
-      message: 'Score submitted successfully',
+      message: 'Score and stats submitted successfully',
     });
   } catch (error) {
     console.error('Error in submit-score:', error);

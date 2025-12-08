@@ -294,10 +294,19 @@ export default function VocabGameContent() {
     const correctAnswer = currentWord.english;
     const revealedLetters = showHint ? Math.floor(timer / 10) : 0;
     
-    // Prevent manual space input (spaces are auto-added by system)
-    if (newValue.endsWith(' ') && !correctAnswer[newValue.length - 1]) {
-      // User tried to type space manually - ignore it
-      return;
+    // Remove all spaces from input (spaces are auto-added by system)
+    // This works for both physical keyboard and virtual keyboard on mobile
+    const prevValue = userAnswer;
+    const hasNewSpace = newValue.includes(' ') && !prevValue.includes(' ');
+    
+    if (hasNewSpace) {
+      // Space was added - remove it and check if it should auto-add based on correct answer
+      newValue = newValue.replace(/\s+/g, '');
+      
+      // If the position where space was added should have a space in correct answer, add it back
+      if (newValue.length < correctAnswer.length && correctAnswer[newValue.length] === ' ') {
+        newValue = newValue + ' ';
+      }
     }
     
     // If hint is shown, prevent changing revealed letters
@@ -315,7 +324,7 @@ export default function VocabGameContent() {
     
     // Auto-skip spaces: if next character in correct answer is space, add it automatically
     // BUT: Only do this when user is TYPING forward (length increasing), not when deleting
-    if (newValue.length < correctAnswer.length && correctAnswer[newValue.length] === ' ' && userAnswer.length < newValue.length) {
+    if (!hasNewSpace && newValue.length < correctAnswer.length && correctAnswer[newValue.length] === ' ' && userAnswer.length < newValue.length) {
       newValue = newValue + ' ';
     }
     
@@ -360,7 +369,7 @@ export default function VocabGameContent() {
       // Show CORRECT letters in yellow for revealed positions (always show correct answer for hints)
       if (revealedLetters > idx && showHint) {
         return (
-          <span key={idx} className="text-primary-yellow font-bold mx-1">
+          <span key={idx} className="text-primary-yellow font-bold mx-0.5">
             {correctAnswer[idx]}
           </span>
         );
@@ -369,7 +378,7 @@ export default function VocabGameContent() {
       // Show user's typed input (for non-revealed positions)
       if (userAnswer[idx] && !(revealedLetters > idx && showHint)) {
         return (
-          <span key={idx} className="text-text-primary mx-1">
+          <span key={idx} className="text-text-primary mx-0.5">
             {userAnswer[idx]}
           </span>
         );
@@ -377,7 +386,7 @@ export default function VocabGameContent() {
       
       // Show underscore for empty positions
       return (
-        <span key={idx} className="text-text-secondary mx-1">
+        <span key={idx} className="text-text-secondary mx-0.5">
           _
         </span>
       );
@@ -436,8 +445,8 @@ export default function VocabGameContent() {
           <div className="flex items-center justify-between mb-2 sm:mb-3 gap-2">
             <div className="flex-1">
               <button
-                onClick={() => router.push(`/category-menu/${category}`)}
-                className="flex items-center gap-2 text-text-secondary hover:text-primary-yellow transition-colors cursor-pointer text-sm sm:text-base"
+                onClick={() => router.push('/dashboard')}
+                className="flex items-center gap-2 text-text-secondary hover:text-primary-yellow transition-colors cursor-pointer text-body-lg"
               >
                 <ArrowLeft className="w-4 sm:w-5 h-4 sm:h-5" />
                 <span>Back</span>
@@ -445,12 +454,12 @@ export default function VocabGameContent() {
             </div>
 
             {/* Progress - Center */}
-            <div className="flex-1 text-center text-text-secondary text-xs sm:text-sm">
+            <div className="flex-1 text-center text-text-secondary text-label">
               Question <span className="text-primary-yellow font-bold">{currentIndex + 1}</span> / {words.length}
             </div>
 
             {/* Timer - Right */}
-            <div className="flex-1 flex items-center justify-end gap-1 sm:gap-2 text-text-secondary text-xs sm:text-sm">
+            <div className="flex-1 flex items-center justify-end gap-1 sm:gap-2 text-text-secondary text-label">
               <Clock className="w-4 sm:w-5 h-4 sm:h-5" />
               <span className="font-mono">{timer}s</span>
             </div>
@@ -458,10 +467,10 @@ export default function VocabGameContent() {
 
           {/* Category & Subcategory Badges */}
           <div className="flex items-center justify-center gap-2 flex-wrap">
-            <span className="inline-block px-2 sm:px-4 py-1 bg-secondary-purple text-white text-xs sm:text-sm font-semibold rounded-full capitalize">
+            <span className="inline-block px-2 sm:px-4 py-1 bg-secondary-purple text-white text-label font-semibold rounded-full capitalize">
               {category}
             </span>
-            <span className="inline-block px-2 sm:px-4 py-1 bg-primary-yellow text-black text-xs sm:text-sm font-semibold rounded-full">
+            <span className="inline-block px-2 sm:px-4 py-1 bg-primary-yellow text-black text-label font-semibold rounded-full">
               Part {subcategory}
             </span>
           </div>
@@ -493,8 +502,8 @@ export default function VocabGameContent() {
           >
             {/* Question */}
             <div className="text-center">
-              <p className="text-text-secondary text-xs sm:text-sm mb-2">Translate this word to English:</p>
-              <h1 className="text-2xl sm:text-3xl md:text-5xl font-bold text-text-primary mb-2">{currentWord.indo}</h1>
+              <p className="text-text-secondary text-label mb-2">Translate this word to English:</p>
+              <h1 className="text-heading-1 text-text-primary mb-2">{currentWord.indo}</h1>
               <div className="flex items-center justify-center gap-2">
                 {currentWord.class && (
                   <span className="inline-block px-3 py-1 bg-primary-yellow text-black text-xs font-semibold rounded-full">
@@ -560,7 +569,7 @@ export default function VocabGameContent() {
                   isSubmitting || 
                   !!feedback
                 }
-                className="px-12 py-4 bg-primary-yellow text-black rounded-xl font-bold text-lg hover:scale-105 disabled:opacity-50 disabled:hover:scale-100 transition-transform cursor-pointer"
+                className="w-32 sm:w-40 py-3 sm:py-4 bg-primary-yellow text-black rounded-xl font-bold text-base sm:text-lg hover:bg-primary-yellow-hover disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer"
               >
                 {isSubmitting ? 'Checking...' : 'Submit'}
               </button>

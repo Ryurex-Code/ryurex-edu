@@ -28,6 +28,17 @@ interface UserAnswer {
   timeTakenMs: number;
 }
 
+interface GameStats {
+  totalQuestions: number;
+  correctAnswers: number;
+  wrongAnswers: number;
+  totalTimeMs: number;
+  avgTimePerQuestionMs: number;
+  fastestAnswerMs: number;
+  slowestAnswerMs: number;
+  accuracyPercent: number;
+}
+
 interface Scores {
   hostScore: number | null;
   joinedScore: number | null;
@@ -188,10 +199,8 @@ export default function PvPGamePage() {
       const data = await response.json();
       let questions = data.words || [];
 
-      // Shuffle and limit to num_questions
-      questions = questions
-        .sort(() => Math.random() - 0.5)
-        .slice(0, num_questions);
+      // Limit to num_questions without shuffling - keep original order for consistency
+      questions = questions.slice(0, num_questions);
 
       return questions;
     } catch (error) {
@@ -209,6 +218,29 @@ export default function PvPGamePage() {
     const timePenalty = (timeTakenSec / timerDuration) * 30;
 
     return Math.max(0, Math.floor(basePoints - timePenalty));
+  };
+
+  const calculateGameStats = (userAnswers: UserAnswer[]): GameStats => {
+    const totalQuestions = userAnswers.length;
+    const correctAnswers = userAnswers.filter((a) => a.isCorrect).length;
+    const wrongAnswers = totalQuestions - correctAnswers;
+    const totalTimeMs = userAnswers.reduce((sum, a) => sum + a.timeTakenMs, 0);
+    const avgTimePerQuestionMs = totalQuestions > 0 ? totalTimeMs / totalQuestions : 0;
+    const timeTakenValues = userAnswers.map((a) => a.timeTakenMs);
+    const fastestAnswerMs = timeTakenValues.length > 0 ? Math.min(...timeTakenValues) : 0;
+    const slowestAnswerMs = timeTakenValues.length > 0 ? Math.max(...timeTakenValues) : 0;
+    const accuracyPercent = totalQuestions > 0 ? (correctAnswers / totalQuestions) * 100 : 0;
+
+    return {
+      totalQuestions,
+      correctAnswers,
+      wrongAnswers,
+      totalTimeMs,
+      avgTimePerQuestionMs: Math.round(avgTimePerQuestionMs),
+      fastestAnswerMs,
+      slowestAnswerMs,
+      accuracyPercent: Math.round(accuracyPercent * 100) / 100,
+    };
   };
 
   const handleAnswerSubmit = (
@@ -258,6 +290,9 @@ export default function PvPGamePage() {
       setGameFinished(true);
       setShowWaitingPopup(true);
 
+      // Calculate game statistics
+      const gameStats = calculateGameStats(userAnswers);
+
       // Submit score to database
       const response = await fetch('/api/pvp/submit-score', {
         method: 'POST',
@@ -267,6 +302,7 @@ export default function PvPGamePage() {
           playerRole: userRole,
           finalScore,
           userAnswers,
+          gameStats, // Include stats in submission
         }),
       });
 
@@ -275,6 +311,7 @@ export default function PvPGamePage() {
       }
 
       console.log('✅ Score submitted:', finalScore);
+      console.log('📊 Game stats:', gameStats);
 
       // Start polling for opponent score
       pollForOpponentScore();
@@ -353,11 +390,11 @@ export default function PvPGamePage() {
 
       {/* Header with Game Info */}
       <div className="border-b border-text-secondary/10">
-        <div className="max-w-4xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between mb-3">
+        <div className="max-w-4xl mx-auto px-3 sm:px-4 py-3 sm:py-4">
+          <div className="flex items-center justify-between mb-2 sm:mb-3 gap-2">
             {/* Progress */}
             <div className="flex-1">
-              <p className="text-text-secondary text-sm">
+              <p className="text-text-secondary text-label">
                 Question{' '}
                 <span className="text-primary-yellow font-bold">
                   {gameState.currentQuestionIndex + 1}
@@ -370,25 +407,25 @@ export default function PvPGamePage() {
             </div>
 
             {/* Timer */}
-            <div className="flex items-center gap-2 text-text-secondary">
-              <Clock className="w-5 h-5" />
+            <div className="flex items-center gap-1 sm:gap-2 text-text-secondary text-label">
+              <Clock className="w-4 sm:w-5 h-4 sm:h-5" />
               <span className="font-mono">
                 {timerDuration - questionTimer}s
               </span>
             </div>
           </div>
 
-          {/* Game Mode & Score */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="inline-block px-4 py-1 bg-secondary-purple text-white text-sm font-semibold rounded-full capitalize">
+          {/* Game Mode & Category & Score */}
+          <div className="flex items-center justify-between flex-wrap gap-2 mb-2 sm:mb-3">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="inline-block px-2 sm:px-4 py-1 bg-secondary-purple text-white text-label font-semibold rounded-full capitalize">
                 {lobbData.game_mode}
               </span>
-              <span className="inline-block px-4 py-1 bg-primary-yellow text-black text-sm font-semibold rounded-full">
+              <span className="inline-block px-2 sm:px-4 py-1 bg-primary-yellow text-black text-label font-semibold rounded-full">
                 {lobbData.category}
               </span>
             </div>
-            <div className="text-primary-yellow font-bold text-xl">
+            <div className="text-primary-yellow font-bold text-base sm:text-lg">
               Score: {gameState.totalScore}
             </div>
           </div>
@@ -396,7 +433,7 @@ export default function PvPGamePage() {
       </div>
 
       {/* Progress Bar */}
-      <div className="max-w-4xl mx-auto px-4 mt-4">
+      <div className="max-w-4xl mx-auto px-3 sm:px-4 mt-3 sm:mt-4">
         <div className="h-2 bg-surface rounded-full overflow-hidden">
           <motion.div
             className="h-full bg-primary-yellow"
@@ -410,7 +447,7 @@ export default function PvPGamePage() {
       </div>
 
       {/* Main Game Area - Conditional Render Based on Game Mode */}
-      <div className="max-w-4xl mx-auto px-4 py-12">
+      <div className="max-w-4xl mx-auto px-3 sm:px-4 py-6 sm:py-12">
         {lobbData.game_mode === 'vocab' ? (
           <VocabGameDisplay
             currentQuestion={currentQuestion}
@@ -598,14 +635,14 @@ function VocabGameDisplay({
       
       if (userAnswer[idx] && !(revealedLetters > idx && hintClickCount > 0)) {
         return (
-          <span key={idx} className="text-text-primary mx-1">
+          <span key={idx} className="text-text-primary mx-0.5">
             {userAnswer[idx]}
           </span>
         );
       }
       
       return (
-        <span key={idx} className="text-text-secondary mx-1">
+        <span key={idx} className="text-text-secondary mx-0.5">
           _
         </span>
       );
@@ -624,8 +661,8 @@ function VocabGameDisplay({
       >
         {/* Question */}
         <div className="text-center">
-          <p className="text-text-secondary text-sm mb-2">Translate this word to English:</p>
-          <h1 className="text-5xl font-bold text-text-primary mb-2">
+          <p className="text-text-secondary text-label mb-2">Translate this word to English:</p>
+          <h1 className="text-heading-1 text-text-primary mb-2">
             {currentQuestion.indo}
           </h1>
           <div className="flex items-center justify-center gap-2">
@@ -655,13 +692,13 @@ function VocabGameDisplay({
             
             {/* Visual underscore display */}
             <div 
-              className="bg-surface px-8 py-6 rounded-xl border-2 border-text-secondary/20 hover:border-primary-yellow/50 transition-colors cursor-text"
+              className="bg-surface px-6 sm:px-8 py-4 sm:py-6 rounded-xl border-2 border-text-secondary/20 hover:border-primary-yellow/50 transition-colors cursor-text"
               onClick={() => {
                 const input = document.querySelector('input[type="text"]') as HTMLInputElement;
                 if (input) input.focus();
               }}
             >
-              <p className="text-4xl font-mono tracking-widest select-none">
+              <p className="text-game-display text-text-secondary tracking-wider select-none">
                 {renderUnderscoreDisplay()}
               </p>
             </div>
@@ -680,11 +717,11 @@ function VocabGameDisplay({
         )}
 
         {/* Buttons */}
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-3 items-center">
           <button
             onClick={onHintClick}
             disabled={!!feedback || gameFinished}
-            className="flex-1 py-3 rounded-xl font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer bg-secondary-purple text-white hover:scale-105 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-32 sm:w-40 py-3 sm:py-3 rounded-xl font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer bg-secondary-purple text-white hover:bg-secondary-purple/90 disabled:opacity-50 disabled:cursor-not-allowed text-label"
           >
             💡 Hint ({hintClickCount})
           </button>
@@ -698,7 +735,7 @@ function VocabGameDisplay({
               !!feedback ||
               gameFinished
             }
-            className="flex-1 py-4 bg-primary-yellow text-black rounded-xl font-bold text-lg hover:scale-105 disabled:opacity-50 disabled:hover:scale-100 transition-transform cursor-pointer"
+            className="w-32 sm:w-40 py-3 sm:py-4 bg-primary-yellow text-black rounded-xl font-bold text-base sm:text-lg hover:bg-primary-yellow-hover disabled:opacity-50 disabled:hover:bg-primary-yellow disabled:cursor-not-allowed transition-all cursor-pointer"
           >
             {isSubmitting ? 'Checking...' : 'Submit'}
           </button>

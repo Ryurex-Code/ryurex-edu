@@ -43,7 +43,7 @@ body {
 @layer utilities {
   /* Responsive Font Sizes - Mobile First */
   .text-heading-1 {
-    @apply text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold;
+    @apply text-2xl sm:text-3xl md:text-5xl font-bold;
   }
 
   .text-heading-2 {
@@ -55,15 +55,20 @@ body {
   }
 
   .text-body-lg {
-    @apply text-base sm:text-lg font-normal;
+    @apply text-sm sm:text-base font-normal;
   }
 
   .text-body-sm {
-    @apply text-sm font-normal;
+    @apply text-xs sm:text-sm font-normal;
   }
 
   .text-label {
     @apply text-xs sm:text-sm font-medium;
+  }
+
+  /* Game Display Font Size */
+  .text-game-display {
+    @apply text-2xl sm:text-3xl md:text-4xl font-mono;
   }
 
   .glow-purple {

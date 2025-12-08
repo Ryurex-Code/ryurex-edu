@@ -4,9 +4,16 @@ import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter, useParams } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Clock, Copy, Check, LogOut, Users } from 'lucide-react';
+import { ArrowLeft, Clock, Copy, Check, LogOut, Users, Edit2 } from 'lucide-react';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import ThemeToggle from '@/components/ThemeToggle';
+
+interface Category {
+  name: string;
+  count: number;
+  subcategoryCount: number;
+  hasSentences: boolean;
+}
 
 interface LobbyData {
   id: string;
@@ -46,6 +53,20 @@ export default function LobbyPage() {
   const [copied, setCopied] = useState(false);
   const [showApprovalPopup, setShowApprovalPopup] = useState(false);
   const [isKicked, setIsKicked] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [editForm, setEditForm] = useState({
+    category: '',
+    subcategoryMode: 'custom' as 'custom' | 'random',
+    subcategory: 1,
+    numQuestions: 1,
+    timerDuration: 5,
+    gameMode: 'vocab' as 'vocab' | 'sentence',
+  });
+  const [maxQuestions, setMaxQuestions] = useState(0);
+  const [subcategoryCount, setSubcategoryCount] = useState(0);
+  const [sentenceAvailable, setSentenceAvailable] = useState<{ [key: string]: boolean }>({});
+  const [touchStartX, setTouchStartX] = useState(0);
 
   const supabase = createClient();
 
@@ -65,7 +86,27 @@ export default function LobbyPage() {
       }
     };
 
+    // Fetch categories for edit form
+    const fetchCategories = async () => {
+      try {
+        const response = await fetch('/api/categories');
+        if (response.ok) {
+          const data = await response.json();
+          setCategories(data.categories);
+          
+          const sentenceMap: { [key: string]: boolean } = {};
+          for (const cat of data.categories) {
+            sentenceMap[cat.name] = cat.hasSentences || false;
+          }
+          setSentenceAvailable(sentenceMap);
+        }
+      } catch (error) {
+        console.error('Error fetching categories:', error);
+      }
+    };
+
     fetchUser();
+    fetchCategories();
 
     return () => {
       isMounted = false;
@@ -78,6 +119,19 @@ export default function LobbyPage() {
 
     let isMounted = true;
     let interval: NodeJS.Timeout | null = null;
+
+    // Cleanup expired lobbies on mount
+    const cleanupExpiredLobbies = async () => {
+      try {
+        await fetch('/api/pvp/cleanup-expired-lobbies', {
+          method: 'POST',
+        });
+      } catch (error) {
+        console.error('Error cleaning up expired lobbies:', error);
+      }
+    };
+
+    cleanupExpiredLobbies();
 
     const fetchLobby = async () => {
       try {
@@ -117,6 +171,18 @@ export default function LobbyPage() {
           setLobbyData(data);
           setIsHost(data.host_user_id === user.id);
           setIsJoined(data.joined_user_id === user.id);
+
+          // Initialize edit form with current lobby data
+          if (data.host_user_id === user.id && !editForm.category) {
+            setEditForm({
+              category: data.category,
+              subcategoryMode: data.subcategory === 0 ? 'random' : 'custom',
+              subcategory: data.subcategory,
+              numQuestions: data.num_questions,
+              timerDuration: data.timer_duration,
+              gameMode: data.game_mode,
+            });
+          }
 
           // Detect if game has started - redirect both players to game page
           if (isNowInProgress && (wasOpponentJoined || data.status === 'opponent_joined')) {
@@ -362,6 +428,134 @@ export default function LobbyPage() {
     }
   };
 
+  // Edit form handlers
+  const handleOpenEditModal = () => {
+    if (lobbyData) {
+      setEditForm({
+        category: lobbyData.category,
+        subcategoryMode: lobbyData.subcategory === 0 ? 'random' : 'custom',
+        subcategory: lobbyData.subcategory,
+        numQuestions: lobbyData.num_questions,
+        timerDuration: lobbyData.timer_duration,
+        gameMode: lobbyData.game_mode,
+      });
+    }
+    setShowEditModal(true);
+  };
+
+  const handleCloseEditModal = () => {
+    setShowEditModal(false);
+  };
+
+  const handleEditFormChange = (field: string, value: any) => {
+    setEditForm(prev => ({ ...prev, [field]: value }));
+  };
+
+  // Update max questions when category or subcategory mode changes
+  useEffect(() => {
+    if (!editForm.category) {
+      setMaxQuestions(0);
+      setSubcategoryCount(0);
+      return;
+    }
+
+    const selectedCategory = categories.find(c => c.name === editForm.category);
+    if (!selectedCategory) {
+      setMaxQuestions(0);
+      setSubcategoryCount(0);
+      return;
+    }
+
+    setSubcategoryCount(selectedCategory.subcategoryCount);
+
+    if (editForm.subcategoryMode === 'custom') {
+      setMaxQuestions(10);
+    } else {
+      setMaxQuestions(selectedCategory.count);
+    }
+
+    if (editForm.numQuestions > maxQuestions) {
+      handleEditFormChange('numQuestions', 1);
+    }
+  }, [editForm.category, editForm.subcategoryMode, categories, maxQuestions]);
+
+  const handleSaveConfiguration = async () => {
+    if (!lobbyData || !isHost) return;
+
+    try {
+      const { error } = await supabase
+        .from('pvp_lobbies')
+        .update({
+          category: editForm.category,
+          subcategory: editForm.subcategoryMode === 'random' ? 0 : editForm.subcategory,
+          num_questions: editForm.numQuestions,
+          timer_duration: editForm.timerDuration,
+          game_mode: editForm.gameMode,
+        })
+        .eq('id', lobbyData.id);
+
+      if (error) {
+        console.error('Error updating configuration:', error);
+      } else {
+        setShowEditModal(false);
+      }
+    } catch (error) {
+      console.error('Error:', error);
+    }
+  };
+
+  // Swipe handlers for mode switch
+  const handleModeSwipeStart = (e: React.TouchEvent) => {
+    setTouchStartX(e.touches[0].clientX);
+  };
+
+  const handleModeSwipeEnd = (e: React.TouchEvent) => {
+    const touchEndX = e.changedTouches[0].clientX;
+    const diff = touchStartX - touchEndX;
+    const threshold = 50; // Minimum swipe distance
+
+    if (Math.abs(diff) > threshold) {
+      if (diff > 0) {
+        // Swiped left -> go to next option (custom -> random)
+        if (editForm.subcategoryMode === 'custom') {
+          handleEditFormChange('subcategoryMode', 'random');
+        }
+      } else {
+        // Swiped right -> go to previous option (random -> custom)
+        if (editForm.subcategoryMode === 'random') {
+          handleEditFormChange('subcategoryMode', 'custom');
+        }
+      }
+    }
+  };
+
+  // Swipe handlers for game mode switch
+  const handleGameModeSwipeStart = (e: React.TouchEvent) => {
+    setTouchStartX(e.touches[0].clientX);
+  };
+
+  const handleGameModeSwipeEnd = (e: React.TouchEvent) => {
+    if (!sentenceAvailable[editForm.category]) return;
+
+    const touchEndX = e.changedTouches[0].clientX;
+    const diff = touchStartX - touchEndX;
+    const threshold = 50;
+
+    if (Math.abs(diff) > threshold) {
+      if (diff > 0) {
+        // Swiped left -> go to sentence
+        if (editForm.gameMode === 'vocab') {
+          handleEditFormChange('gameMode', 'sentence');
+        }
+      } else {
+        // Swiped right -> go to vocab
+        if (editForm.gameMode === 'sentence') {
+          handleEditFormChange('gameMode', 'vocab');
+        }
+      }
+    }
+  };
+
   if (loading || !user) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -382,14 +576,14 @@ export default function LobbyPage() {
     <div className="flex flex-col min-h-screen bg-background text-foreground">
       {/* Navbar */}
       <div className="border-b border-text-secondary/10">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div className="max-w-6xl mx-auto px-3 sm:px-4 py-3 sm:py-4">
           <div className="flex items-center justify-between">
             <button
               onClick={() => router.push('/pvp')}
-              className="flex items-center gap-2 text-text-secondary hover:text-primary-yellow hover:font-semibold transition-colors cursor-pointer"
+              className="flex items-center gap-2 text-text-secondary hover:text-primary-yellow hover:font-semibold transition-colors cursor-pointer text-body-lg"
             >
-              <ArrowLeft className="w-5 h-5" />
-              <span>Back to PvP</span>
+              <ArrowLeft className="w-4 sm:w-5 h-4 sm:h-5" />
+              <span className="text-sm sm:text-base">Back to PvP</span>
             </button>
             <ThemeToggle />
           </div>
@@ -397,7 +591,7 @@ export default function LobbyPage() {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="flex-1 py-4 sm:py-6 md:py-8 px-4 sm:px-6 lg:px-8">
         <div className="max-w-4xl mx-auto">
           {/* Kicked Popup */}
           {isKicked && (
@@ -427,12 +621,12 @@ export default function LobbyPage() {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mb-8"
+            className="mb-4 sm:mb-6"
           >
-            <h1 className="text-4xl md:text-5xl font-bold mb-2">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-2">
               <span className="text-primary-yellow">Battle</span> Lobby
             </h1>
-            <p className="text-muted-foreground text-lg">
+            <p className="text-muted-foreground text-sm sm:text-base">
               {isHost ? 'Waiting for opponent to join...' : 'Waiting for host to accept...'}
             </p>
           </motion.div>
@@ -471,30 +665,197 @@ export default function LobbyPage() {
             </motion.div>
           )}
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          {/* Edit Configuration Modal */}
+          {showEditModal && isHost && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+              onClick={handleCloseEditModal}
+            >
+              <motion.div
+                className="bg-card rounded-2xl p-8 border border-theme max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <h2 className="text-2xl font-bold mb-6">Edit Battle Configuration</h2>
+                
+                <div className="space-y-4 mb-6">
+                  {/* Category */}
+                  <div>
+                    <label className="block text-sm font-semibold text-foreground mb-2">
+                      Category
+                    </label>
+                    <select
+                      value={editForm.category}
+                      onChange={(e) => handleEditFormChange('category', e.target.value)}
+                      className="w-full px-4 py-2 bg-background border border-theme rounded-lg text-foreground focus:outline-none focus:border-primary-yellow"
+                    >
+                      <option value="">Select a category</option>
+                      {categories.map((cat) => (
+                        <option key={cat.name} value={cat.name}>
+                          {cat.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Subcategory Mode - Switch Button */}
+                  <div>
+                    <label className="block text-sm font-semibold text-foreground mb-3">
+                      Mode
+                    </label>
+                    <div 
+                      className="inline-flex bg-background border border-theme rounded-lg p-1 select-none"
+                      onTouchStart={handleModeSwipeStart}
+                      onTouchEnd={handleModeSwipeEnd}
+                    >
+                      {['custom', 'random'].map((mode) => (
+                        <button
+                          key={mode}
+                          onClick={() => handleEditFormChange('subcategoryMode', mode)}
+                          className={`px-6 py-2 rounded-md font-semibold text-sm transition-all cursor-pointer ${
+                            editForm.subcategoryMode === mode
+                              ? 'bg-primary-yellow text-black'
+                              : 'text-foreground hover:text-primary-yellow'
+                          }`}
+                        >
+                          {mode.charAt(0).toUpperCase() + mode.slice(1)}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Subcategory (if custom mode) */}
+                  {editForm.subcategoryMode === 'custom' && (
+                    <div>
+                      <label className="block text-sm font-semibold text-foreground mb-2">
+                        Part
+                      </label>
+                      <select
+                        value={editForm.subcategory}
+                        onChange={(e) => handleEditFormChange('subcategory', parseInt(e.target.value))}
+                        className="w-full px-4 py-2 bg-background border border-theme rounded-lg text-foreground focus:outline-none focus:border-primary-yellow"
+                      >
+                        {[1, 2, 3, 4, 5].map((part) => (
+                          <option key={part} value={part}>
+                            Part {part}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  {/* Number of Questions */}
+                  <div>
+                    <label className="block text-sm font-semibold text-foreground mb-2">
+                      Number of Questions: {editForm.numQuestions}
+                    </label>
+                    <input
+                      type="range"
+                      min="1"
+                      max={maxQuestions}
+                      value={editForm.numQuestions}
+                      onChange={(e) => handleEditFormChange('numQuestions', parseInt(e.target.value))}
+                      className="w-full h-2 bg-background rounded-lg appearance-none cursor-pointer accent-primary-yellow"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">Max: {maxQuestions}</p>
+                  </div>
+
+                  {/* Timer Duration */}
+                  <div>
+                    <label className="block text-sm font-semibold text-foreground mb-2">
+                      Time per Question: {editForm.timerDuration}s
+                    </label>
+                    <input
+                      type="range"
+                      min="5"
+                      max="60"
+                      value={editForm.timerDuration}
+                      onChange={(e) => handleEditFormChange('timerDuration', parseInt(e.target.value))}
+                      className="w-full h-2 bg-background rounded-lg appearance-none cursor-pointer accent-primary-yellow"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">5s - 60s</p>
+                  </div>
+
+                  {/* Game Mode - Switch Button */}
+                  <div>
+                    <label className="block text-sm font-semibold text-foreground mb-3">
+                      Game Type
+                    </label>
+                    <div 
+                      className="inline-flex bg-background border border-theme rounded-lg p-1 select-none"
+                      onTouchStart={handleGameModeSwipeStart}
+                      onTouchEnd={handleGameModeSwipeEnd}
+                    >
+                      <button
+                        onClick={() => handleEditFormChange('gameMode', 'vocab')}
+                        className={`px-6 py-2 rounded-md font-semibold text-sm transition-all cursor-pointer ${
+                          editForm.gameMode === 'vocab'
+                            ? 'bg-primary-yellow text-black'
+                            : 'text-foreground hover:text-primary-yellow'
+                        }`}
+                      >
+                        Vocab
+                      </button>
+                      {sentenceAvailable[editForm.category] && (
+                        <button
+                          onClick={() => handleEditFormChange('gameMode', 'sentence')}
+                          className={`px-6 py-2 rounded-md font-semibold text-sm transition-all cursor-pointer ${
+                            editForm.gameMode === 'sentence'
+                              ? 'bg-primary-yellow text-black'
+                              : 'text-foreground hover:text-primary-yellow'
+                          }`}
+                        >
+                          Sentence
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex gap-3">
+                  <button
+                    onClick={handleCloseEditModal}
+                    className="flex-1 py-2 px-4 bg-background border border-theme rounded-lg hover:border-primary-yellow transition-colors font-semibold cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSaveConfiguration}
+                    className="flex-1 py-2 px-4 bg-primary-yellow text-black rounded-lg hover:bg-primary-yellow/90 transition-colors font-semibold cursor-pointer"
+                  >
+                    Save Changes
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
             {/* Game Code Card */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-card rounded-2xl p-6 border border-theme"
+              className="bg-card rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-theme"
             >
-              <h2 className="text-xl font-bold mb-4">Game Code</h2>
+              <h2 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4">Game Code</h2>
               <div className="relative">
                 <input
                   type="text"
                   value={gameCode}
                   readOnly
-                  className="w-full px-4 py-4 bg-primary-yellow text-black text-center text-2xl font-mono font-bold border border-primary-yellow rounded-lg focus:outline-none"
+                  className="w-full px-3 sm:px-4 py-2 sm:py-4 bg-primary-yellow text-black text-center text-lg sm:text-2xl font-mono font-bold border border-primary-yellow rounded-lg focus:outline-none"
                 />
                 <button
                   onClick={handleCopyCode}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 p-2 hover:bg-primary-yellow/80 rounded-lg transition-colors cursor-pointer"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 sm:p-2 hover:bg-primary-yellow/80 rounded-lg transition-colors cursor-pointer"
                   title="Copy game code"
                 >
                   {copied ? (
-                    <Check className="w-5 h-5 text-black" />
+                    <Check className="w-4 sm:w-5 h-4 sm:h-5 text-black" />
                   ) : (
-                    <Copy className="w-5 h-5 text-black" />
+                    <Copy className="w-4 sm:w-5 h-4 sm:h-5 text-black" />
                   )}
                 </button>
               </div>
@@ -504,16 +865,16 @@ export default function LobbyPage() {
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-card rounded-2xl p-6 border border-theme"
+              className="bg-card rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-theme"
             >
-              <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-                <Clock className="w-5 h-5 text-primary-yellow" />
+              <h2 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4 flex items-center gap-2">
+                <Clock className="w-4 sm:w-5 h-4 sm:h-5 text-primary-yellow" />
                 Expires In
               </h2>
-              <div className="text-5xl font-bold text-primary-yellow text-center">
+              <div className="text-3xl sm:text-5xl font-bold text-primary-yellow text-center">
                 {Math.floor(timeRemaining / 60)}:{(timeRemaining % 60).toString().padStart(2, '0')}
               </div>
-              <p className="text-center text-muted-foreground text-sm mt-2">
+              <p className="text-center text-muted-foreground text-xs sm:text-sm mt-2">
                 Lobby will expire after 5 minutes
               </p>
             </motion.div>
@@ -523,30 +884,30 @@ export default function LobbyPage() {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-card rounded-2xl p-6 border border-theme mb-8"
+            className="bg-card rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-theme mb-6 sm:mb-8"
           >
-            <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
-              <Users className="w-5 h-5 text-primary-yellow" />
+            <h2 className="text-lg sm:text-xl font-bold mb-4 sm:mb-6 flex items-center gap-2">
+              <Users className="w-4 sm:w-5 h-4 sm:h-5 text-primary-yellow" />
               Players
             </h2>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
               {/* Player 1 (Host) */}
-              <div className="bg-background rounded-lg p-6 border border-theme">
+              <div className="bg-primary-yellow rounded-lg p-6">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-semibold text-lg">Player 1</h3>
-                  <span className="text-xs px-2 py-1 bg-primary-yellow/20 text-primary-yellow rounded-full">
+                  <h3 className="font-semibold text-lg text-black">Player 1</h3>
+                  <span className="text-xs px-2 py-1 bg-black/10 text-black rounded-full font-semibold">
                     Host
                   </span>
                 </div>
-                <p className="text-foreground font-semibold text-xl mb-4">
+                <p className="text-black font-semibold text-xl mb-4">
                   {hostProfile?.display_name || 'Loading...'}
                 </p>
                 <div className="flex gap-2">
                   {isHost && (
                     <button
                       onClick={handleLeaveLobby}
-                      className="flex-1 py-2 px-4 bg-background border border-theme rounded-lg hover:border-primary-yellow transition-colors font-semibold text-sm flex items-center justify-center gap-2 cursor-pointer"
+                      className="flex-1 py-2 px-4 bg-black/10 border border-black/20 text-black rounded-lg hover:bg-black/20 transition-colors font-semibold text-sm flex items-center justify-center gap-2 cursor-pointer"
                     >
                       <LogOut className="w-4 h-4" />
                       Leave
@@ -556,26 +917,26 @@ export default function LobbyPage() {
               </div>
 
               {/* Player 2 (Joined) */}
-              <div className="bg-background rounded-lg p-6 border border-theme">
+              <div className="bg-primary-yellow rounded-lg p-6">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-semibold text-lg">Player 2</h3>
+                  <h3 className="font-semibold text-lg text-black">Player 2</h3>
                   {joinedProfile && (
                     <>
                       {lobbyData.host_approved === null && (
-                        <span className="text-xs px-2 py-1 bg-secondary-purple/20 text-secondary-purple rounded-full">
+                        <span className="text-xs px-2 py-1 bg-black/10 text-black rounded-full font-semibold">
                           Pending
                         </span>
                       )}
                       {lobbyData.host_approved === false && (
-                        <span className="text-xs px-2 py-1 bg-red-500/20 text-red-400 rounded-full">
+                        <span className="text-xs px-2 py-1 bg-red-600/20 text-red-700 rounded-full font-semibold">
                           Rejected
                         </span>
                       )}
                       {lobbyData.host_approved === true && (
-                        <span className={`text-xs px-2 py-1 rounded-full ${
+                        <span className={`text-xs px-2 py-1 rounded-full font-semibold ${
                           lobbyData.player2_ready
-                            ? 'bg-primary-yellow/20 text-primary-yellow'
-                            : 'bg-muted-foreground/20 text-muted-foreground'
+                            ? 'bg-green-600/20 text-green-700'
+                            : 'bg-black/10 text-black'
                         }`}>
                           {lobbyData.player2_ready ? 'Ready' : 'Not Ready'}
                         </span>
@@ -585,11 +946,11 @@ export default function LobbyPage() {
                 </div>
                 {joinedProfile ? (
                   <>
-                    <p className="text-foreground font-semibold text-xl mb-4">
+                    <p className="text-black font-semibold text-xl mb-4">
                       {joinedProfile.display_name}
                     </p>
                     {lobbyData.host_approved === null && (
-                      <p className="text-muted-foreground text-sm mb-4">
+                      <p className="text-black/60 text-sm mb-4">
                         Waiting for host approval...
                       </p>
                     )}
@@ -597,7 +958,7 @@ export default function LobbyPage() {
                       {isHost && joinedProfile && lobbyData.status !== 'in_progress' && (
                         <button
                           onClick={handleKickPlayer}
-                          className="flex-1 py-2 px-4 bg-red-500/10 border border-red-500/30 text-red-400 rounded-lg hover:bg-red-500/20 transition-colors font-semibold text-sm cursor-pointer"
+                          className="flex-1 py-2 px-4 bg-red-600/20 border border-red-600/30 text-red-700 rounded-lg hover:bg-red-600/30 transition-colors font-semibold text-sm cursor-pointer"
                         >
                           Kick
                         </button>
@@ -605,7 +966,7 @@ export default function LobbyPage() {
                       {isJoined && !lobbyData.player2_ready && lobbyData.host_approved === true && (
                         <button
                           onClick={handleReady}
-                          className="flex-1 py-2 px-4 bg-primary-yellow text-black rounded-lg hover:bg-primary-yellow/90 transition-colors font-semibold text-sm cursor-pointer"
+                          className="flex-1 py-2 px-4 bg-black text-primary-yellow rounded-lg hover:bg-black/90 transition-colors font-semibold text-sm cursor-pointer"
                         >
                           Ready
                         </button>
@@ -613,7 +974,7 @@ export default function LobbyPage() {
                       {isJoined && (
                         <button
                           onClick={handleLeaveLobby}
-                          className="flex-1 py-2 px-4 bg-background border border-theme rounded-lg hover:border-primary-yellow transition-colors font-semibold text-sm flex items-center justify-center gap-2 cursor-pointer"
+                          className="flex-1 py-2 px-4 bg-black/10 border border-black/20 text-black rounded-lg hover:bg-black/20 transition-colors font-semibold text-sm flex items-center justify-center gap-2 cursor-pointer"
                         >
                           <LogOut className="w-4 h-4" />
                           Leave
@@ -622,7 +983,7 @@ export default function LobbyPage() {
                     </div>
                   </>
                 ) : (
-                  <p className="text-muted-foreground text-sm">Waiting for opponent to join...</p>
+                  <p className="text-black/60 text-sm">Waiting for opponent to join...</p>
                 )}
               </div>
             </div>
@@ -632,10 +993,22 @@ export default function LobbyPage() {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-card rounded-2xl p-6 border border-theme mb-8"
+            className="bg-card rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-theme mb-6 sm:mb-8"
           >
-            <h2 className="text-lg font-bold mb-4 text-foreground">Battle Configuration</h2>
-            <div className="bg-background rounded-lg p-4 grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-base sm:text-lg font-bold text-foreground">Battle Configuration</h2>
+              {isHost && lobbyData.status !== 'in_progress' && (
+                <button
+                  onClick={handleOpenEditModal}
+                  className="flex items-center gap-2 px-2 sm:px-3 py-1.5 sm:py-2 bg-primary-yellow/20 text-primary-yellow hover:bg-primary-yellow/30 rounded-lg transition-colors font-semibold text-xs sm:text-sm cursor-pointer"
+                  title="Edit Battle Configuration"
+                >
+                  <Edit2 className="w-3 sm:w-4 h-3 sm:h-4" />
+                  Edit
+                </button>
+              )}
+            </div>
+            <div className="bg-background rounded-lg p-3 sm:p-4 grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 text-xs sm:text-sm">
               <div>
                 <p className="text-muted-foreground">Category</p>
                 <p className="font-semibold text-primary-yellow">{lobbyData.category}</p>
@@ -671,7 +1044,7 @@ export default function LobbyPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               onClick={handleStartGame}
-              className="w-full py-4 bg-primary-yellow text-black rounded-lg font-bold text-lg hover:bg-primary-yellow-hover transition-colors cursor-pointer"
+              className="w-full py-3 sm:py-4 bg-primary-yellow text-black rounded-lg font-bold text-base sm:text-lg hover:bg-primary-yellow-hover transition-colors cursor-pointer"
             >
               Start Battle
             </motion.button>

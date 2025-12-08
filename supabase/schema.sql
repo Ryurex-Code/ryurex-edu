@@ -196,7 +196,6 @@ CREATE TABLE IF NOT EXISTS public.pvp_lobbies (
   num_questions smallint NOT NULL CHECK (num_questions >= 1),
   timer_duration smallint NOT NULL CHECK (timer_duration >= 5),
   game_mode text NOT NULL,  -- 'vocab' atau 'sentence'
-  random_seed text,  -- Untuk random mode consistency
   
   -- Game Status
   status text DEFAULT 'waiting',
@@ -212,10 +211,29 @@ CREATE TABLE IF NOT EXISTS public.pvp_lobbies (
   host_score integer,
   joined_score integer,
   
+  -- Host Statistics
+  host_total_questions integer DEFAULT 0,
+  host_correct_answers integer DEFAULT 0,
+  host_wrong_answers integer DEFAULT 0,
+  host_accuracy_percent float,
+  host_total_time_ms integer,
+  host_avg_time_per_question_ms float,
+  host_fastest_answer_ms integer,
+  host_slowest_answer_ms integer,
+  
+  -- Joined Player Statistics
+  joined_total_questions integer DEFAULT 0,
+  joined_correct_answers integer DEFAULT 0,
+  joined_wrong_answers integer DEFAULT 0,
+  joined_accuracy_percent float,
+  joined_total_time_ms integer,
+  joined_avg_time_per_question_ms float,
+  joined_fastest_answer_ms integer,
+  joined_slowest_answer_ms integer,
+  
   -- Timestamps
   created_at timestamp with time zone DEFAULT now(),
   started_at timestamp with time zone,
-  finished_at timestamp with time zone,
   expires_at timestamp with time zone
 );
 
@@ -260,13 +278,3 @@ CREATE POLICY "Player 2 can join lobby"
   WITH CHECK (
     joined_user_id = auth.uid()  -- Only allow setting joined_user_id to current user
   );
-
--- ============================================
--- NOTES
--- ============================================
--- 1. Run this SQL in Supabase SQL Editor
--- 2. Make sure to seed vocab_master table (see seed_vocab_data.sql)
--- 3. Test RLS policies by querying as authenticated user
--- 4. User profile is auto-created when user signs up
--- 5. PvP lobbies expire after 5 minutes if no one joins
--- 6. Scores are calculated locally on client, submitted to server at game end

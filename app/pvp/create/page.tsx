@@ -47,7 +47,7 @@ export default function CreateLobbyPage() {
   const router = useRouter();
   const supabase = createClient();
 
-  // Fetch user
+  // Fetch user and check active lobby
   useEffect(() => {
     let isMounted = true;
 
@@ -58,8 +58,25 @@ export default function CreateLobbyPage() {
           router.push('/login');
         } else {
           setUser(user);
+          // Check if user has an active lobby
+          checkActiveLobby();
         }
         setLoading(false);
+      }
+    };
+
+    const checkActiveLobby = async () => {
+      try {
+        const response = await fetch('/api/pvp/check-active-lobby');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.hasActiveLobby && data.lobby) {
+            // Redirect to active lobby
+            router.push(`/pvp/lobby/${data.lobby.gameCode}`);
+          }
+        }
+      } catch (error) {
+        console.error('Error checking active lobby:', error);
       }
     };
 

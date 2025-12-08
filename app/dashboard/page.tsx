@@ -10,6 +10,7 @@ import type { User as SupabaseUser } from '@supabase/supabase-js';
 import ThemeToggle from '@/components/ThemeToggle';
 import EditDisplayNameModal from '@/components/EditDisplayNameModal';
 import Leaderboard from '@/components/Leaderboard';
+import ScrollToTopButton from '@/components/ScrollToTopButton';
 import Footer from '@/components/Footer';
 import Image from 'next/image';
 
@@ -458,6 +459,9 @@ export default function DashboardPage() {
         />
         </div>
       </div>
+
+      {/* Scroll to Top Button */}
+      <ScrollToTopButton />
 
       {/* Full-width Footer */}
       <Footer />

@@ -82,12 +82,10 @@ export async function GET(req: NextRequest) {
     const reviewSentences = (allSentences as Array<{ id: number }>).filter((s) => reviewedVocabIds.has(s.id));
     const newSentences = (allSentences as Array<{ id: number }>).filter((s) => !reviewedVocabIds.has(s.id));
 
-    // Calculate mix: ~40% review, ~60% new (up to 10 total)
-    const reviewCount = Math.ceil(10 * 0.4);
-    const newCount = 10 - reviewCount;
+    // Select all available sentences (no hardcoded limit)
     const selectedVocabIds = [
-      ...reviewSentences.slice(0, reviewCount).map((s) => s.id),
-      ...newSentences.slice(0, newCount).map((s) => s.id),
+      ...reviewSentences.map((s) => s.id),
+      ...newSentences.map((s) => s.id),
     ];
 
     // 3. Fetch full data for selected sentences

@@ -60,10 +60,12 @@ export default function SentenceModeContent() {
           if (data.sentences.length === 0) {
             console.log('📭 No sentences due today');
           } else {
-            setSentences(data.sentences);
+            // Limit to 10 sentences per session
+            setSentences(data.sentences.slice(0, 10));
           }
         } else if (data.words && Array.isArray(data.words)) {
-          setSentences(data.words);
+          // Limit to 10 sentences per session
+          setSentences(data.words.slice(0, 10));
         }
 
         if (isMounted) setIsLoading(false);
@@ -312,23 +314,36 @@ export default function SentenceModeContent() {
 
       {/* Header */}
       <div className="border-b border-text-secondary/10">
-        <div className="max-w-4xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <button
-              onClick={() => router.push('/dashboard')}
-              className="flex items-center gap-2 text-text-secondary hover:text-primary-yellow transition-colors cursor-pointer"
-            >
-              <ArrowLeft className="w-5 h-5" />
-              <span>Back to Dashboard</span>
-            </button>
-            <h1 className="text-xl font-bold text-text-primary">Sentence Mode</h1>
-            <div className="w-20" />
+        <div className="max-w-4xl mx-auto px-3 sm:px-4 py-3 sm:py-4">
+          <div className="flex items-center justify-between mb-2 sm:mb-3 gap-2">
+            <div className="flex-1">
+              <button
+                onClick={() => router.push('/dashboard')}
+                className="flex items-center gap-2 text-text-secondary hover:text-primary-yellow transition-colors cursor-pointer text-body-lg"
+              >
+                <ArrowLeft className="w-4 sm:w-5 h-4 sm:h-5" />
+                <span>Back</span>
+              </button>
+            </div>
+
+            {/* Progress - Center */}
+            <div className="flex-1 text-center text-text-secondary text-label">
+              Question <span className="text-primary-yellow font-bold">{currentIndex + 1}</span> / {sentences.length}
+            </div>
+
+            {/* Spacer - Right */}
+            <div className="flex-1" />
+          </div>
+
+          {/* Title - Daily Sentence Mode */}
+          <div className="flex items-center justify-center">
+            <h1 className="text-heading-3 text-text-primary">Daily Sentences</h1>
           </div>
         </div>
       </div>
 
       {/* Progress Bar */}
-      <div className="max-w-4xl mx-auto px-4 mt-4">
+      <div className="max-w-4xl mx-auto px-3 sm:px-4 mt-3 sm:mt-4">
         <div className="h-2 bg-surface rounded-full overflow-hidden">
           <motion.div
             className="h-full bg-primary-yellow"
@@ -340,7 +355,7 @@ export default function SentenceModeContent() {
       </div>
 
       {/* Main Game Area */}
-      <div className="max-w-4xl mx-auto px-4 py-12">
+      <div className="max-w-4xl mx-auto px-3 sm:px-4 py-6 sm:py-12">
         <AnimatePresence mode="wait">
           <motion.div
             key={currentIndex}
@@ -351,17 +366,17 @@ export default function SentenceModeContent() {
           >
             {/* Question - Indonesian Sentence */}
             <div className="bg-card border-2 border-theme rounded-2xl p-8">
-              <p className="text-sm font-semibold text-text-secondary mb-2 uppercase tracking-wide">
+              <p className="text-label font-semibold text-text-secondary mb-2 uppercase tracking-wide">
                 Complete the sentence
               </p>
-              <p className="text-3xl font-bold text-text-primary">
+              <p className="text-heading-1 text-text-primary">
                 {currentSentence.sentence_indo}
               </p>
             </div>
 
             {/* Underscore Display (all words blank) */}
             <div className="bg-card-darker border-2 border-theme rounded-2xl p-8 text-center">
-              <p className="text-4xl font-mono text-text-secondary tracking-wider break-words">
+              <p className="text-game-display text-text-secondary tracking-wider break-words">
                 {renderUnderscoreDisplay()}
               </p>
             </div>
@@ -405,7 +420,7 @@ export default function SentenceModeContent() {
               <motion.div
                 initial={{ scale: 0.8, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
-                className={`p-6 rounded-2xl text-center font-bold text-lg flex items-center justify-center gap-3 ${
+                className={`p-6 rounded-2xl text-center font-bold text-body-lg flex items-center justify-center gap-3 ${
                   feedback === 'correct'
                     ? 'bg-green-500/20 border-2 border-green-500/50 text-green-400'
                     : 'bg-red-500/20 border-2 border-red-500/50 text-red-400'
@@ -433,8 +448,8 @@ export default function SentenceModeContent() {
                 transition={{ delay: 0.3 }}
                 className="bg-card border-2 border-theme rounded-2xl p-6"
               >
-                <p className="text-sm text-text-secondary mb-2">Correct Answer:</p>
-                <p className="text-2xl font-bold text-primary-yellow">{currentSentence.sentence_english}</p>
+                <p className="text-label text-text-secondary mb-2">Correct Answer:</p>
+                <p className="text-heading-3 text-primary-yellow">{currentSentence.sentence_english}</p>
               </motion.div>
             )}
           </motion.div>

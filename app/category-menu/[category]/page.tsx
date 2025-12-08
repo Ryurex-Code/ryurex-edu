@@ -7,6 +7,7 @@ import { motion } from 'framer-motion';
 import { ArrowLeft, Play, LogOut } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import ThemeToggle from '@/components/ThemeToggle';
+import ScrollToTopButton from '@/components/ScrollToTopButton';
 
 // Helper function to convert 'a1-oxford' to 'A1 Oxford'
 const formatCategoryName = (category: string): string => {
@@ -180,7 +181,7 @@ export default function CategoryMenuPage() {
               className="spinner-loading"
             />
           </div>
-          <p className="text-text-secondary">Loading category...</p>
+          <p className="text-body-sm text-text-secondary">Loading category...</p>
         </div>
       </div>
     );
@@ -237,7 +238,7 @@ export default function CategoryMenuPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Left Side - Subcategory Cards */}
           <div className="lg:col-span-2 space-y-4">
-            <h2 className="text-2xl font-bold text-text-primary mb-6">
+            <h2 className="text-heading-2 text-text-primary mb-6">
               Choose a Part
             </h2>
             
@@ -261,7 +262,7 @@ export default function CategoryMenuPage() {
                     }`}
                   >
                     <div className="flex items-center justify-between mb-2">
-                      <h3 className="text-xl font-bold">
+                      <h3 className="text-heading-3 font-bold">
                         Part {sub.subcategory}
                       </h3>
                       {selectedSubcategory === sub.subcategory && (
@@ -272,7 +273,7 @@ export default function CategoryMenuPage() {
                         </div>
                       )}
                     </div>
-                    <p className={`text-sm mb-3 ${
+                    <p className={`text-label mb-3 ${
                       selectedSubcategory === sub.subcategory ? 'text-black/70 font-medium' : 'text-black/60'
                     }`}>
                       {sub.word_count} words
@@ -286,7 +287,7 @@ export default function CategoryMenuPage() {
                           style={{ width: `${progressPercentage}%` }}
                         />
                       </div>
-                      <p className={`text-xs ${
+                      <p className={`text-label text-xs ${
                         selectedSubcategory === sub.subcategory ? 'text-black/60 font-medium' : 'text-black/50'
                       }`}>
                         {learnedCount} of {totalWords} learned ({Math.round(progressPercentage)}%)
@@ -327,13 +328,13 @@ export default function CategoryMenuPage() {
 
                 {/* Content */}
                 <div className="p-6">
-                  <h2 className="text-2xl font-bold text-text-primary mb-2">
+                  <h2 className="text-heading-2 text-text-primary mb-2">
                     {formatCategoryName(categoryName)}
                   </h2>
-                  <p className="text-text-secondary">
+                  <p className="text-body-lg text-text-secondary">
                     {categoryData.total_words} words total
                   </p>
-                  <p className="text-text-secondary/60 text-sm mt-1">
+                  <p className="text-label text-text-secondary/60 mt-1">
                     {categoryData.subcategories.length} parts available
                   </p>
                 </div>
@@ -345,7 +346,7 @@ export default function CategoryMenuPage() {
                 <button
                   onClick={handlePlayVocab}
                   disabled={selectedSubcategory === null}
-                  className={`w-full py-4 rounded-2xl font-bold text-lg flex items-center justify-center gap-3 transition-all cursor-pointer ${
+                  className={`w-full py-4 rounded-2xl font-bold text-body-lg flex items-center justify-center gap-3 transition-all cursor-pointer ${
                     selectedSubcategory !== null
                       ? 'bg-primary-yellow text-black hover:scale-105 hover:shadow-lg'
                       : 'bg-primary-yellow text-black opacity-50 cursor-not-allowed'
@@ -359,7 +360,7 @@ export default function CategoryMenuPage() {
                 {selectedSubcategory !== null && sentenceAvailability[selectedSubcategory] && (
                   <button
                     onClick={handlePlaySentence}
-                    className="w-full py-4 rounded-2xl font-bold text-lg flex items-center justify-center gap-3 transition-all cursor-pointer bg-secondary-purple text-white hover:scale-105 hover:shadow-lg"
+                    className="w-full py-4 rounded-2xl font-bold text-body-lg flex items-center justify-center gap-3 transition-all cursor-pointer bg-secondary-purple text-white hover:scale-105 hover:shadow-lg"
                   >
                     <Play className="w-5 h-5" />
                     Play Sentence Mode
@@ -369,7 +370,7 @@ export default function CategoryMenuPage() {
 
               {/* Info Text */}
               {selectedSubcategory === null && (
-                <p className="text-center text-text-secondary/60 text-sm">
+                <p className="text-center text-label text-text-secondary/60">
                   👆 Select a part above to start playing
                 </p>
               )}
@@ -377,6 +378,9 @@ export default function CategoryMenuPage() {
           </div>
         </div>
       </div>
+
+      {/* Scroll to Top Button */}
+      <ScrollToTopButton />
     </div>
   );
 }
