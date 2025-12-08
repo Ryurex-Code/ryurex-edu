@@ -437,7 +437,7 @@ export default function LobbyPage() {
         subcategory: lobbyData.subcategory,
         numQuestions: lobbyData.num_questions,
         timerDuration: lobbyData.timer_duration,
-        gameMode: lobbyData.game_mode,
+        gameMode: (lobbyData.game_mode as 'vocab' | 'sentence') || 'vocab',
       });
     }
     setShowEditModal(true);
