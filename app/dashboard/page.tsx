@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { BarChart3, BookOpen, LogOut, Play, Clock, Search, Edit2, Zap, Menu, X } from 'lucide-react';
+import { BarChart3, BookOpen, LogOut, Play, Clock, Search, Edit2, Zap, Menu, X, Sword } from 'lucide-react';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import ThemeToggle from '@/components/ThemeToggle';
 import EditDisplayNameModal from '@/components/EditDisplayNameModal';
@@ -255,7 +255,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Game Mode Selection */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Vocab Mode */}
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
@@ -304,6 +304,33 @@ export default function DashboardPage() {
                   </div>
                   <span className="text-secondary-purple font-semibold">
                     {userStats?.stats.sentences_due_today || 0} sentences due today
+                  </span>
+                </div>
+              </div>
+            </Link>
+          </motion.div>
+
+          {/* PvP Mode */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.7 }}
+          >
+            <Link href="/pvp">
+              <div className="group bg-card border-2 border-red-500 border-opacity-30 rounded-3xl p-8 hover:border-red-500 transition-colors cursor-pointer shadow-lg">
+                <div className="flex items-center justify-center w-16 h-16 bg-red-500/20 rounded-2xl mb-4">
+                  <Sword className="w-8 h-8 text-red-500" />
+                </div>
+                <h3 className="text-2xl font-bold mb-2">PvP Mode</h3>
+                <p className="text-muted-foreground mb-4">
+                  Challenge friends in head-to-head vocabulary battles
+                </p>
+                <div className="flex items-center space-x-2 text-sm">
+                  <div className="w-6 h-6 bg-red-500/20 rounded-md flex items-center justify-center">
+                    <Sword className="w-4 h-4 text-red-500" />
+                  </div>
+                  <span className="text-red-500 font-semibold">
+                    Competitive
                   </span>
                 </div>
               </div>

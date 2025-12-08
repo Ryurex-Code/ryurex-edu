@@ -73,7 +73,6 @@ export async function GET(request: Request) {
     console.log(`✅ Found ${vocabIds.length} words due for review today`);
 
     // Step 2: Get vocab_master data for these IDs (fast - indexed query)
-    // eslint-disable-next-line prefer-const
     let vocabQuery = supabase
       .from('vocab_master')
       .select('id, indo, english, class, category, subcategory')

@@ -53,6 +53,14 @@ export async function GET() {
       .eq('user_id', user.id)
       .gt('correct_count', 0);
 
+    // Calculate XP progress to next level
+    // Simple linear system: Every level needs 100 XP
+    const currentLevelXp = (userData.level - 1) * 100;
+    
+    const xpProgress = userData.xp - currentLevelXp;
+    const xpNeeded = 100; // Fixed 100 XP per level
+    const progressPercentage = (xpProgress / xpNeeded) * 100;
+
     return NextResponse.json({
       success: true,
       user: {
@@ -60,6 +68,7 @@ export async function GET() {
         username: userData.username,
         email: user.email,
         xp: userData.xp,
+        level: userData.level,
         streak: userData.streak,
         display_name: userData.display_name,
         last_activity_date: userData.last_activity_date,
@@ -69,6 +78,9 @@ export async function GET() {
         words_due_today: wordsDueCount || 0,
         sentences_due_today: sentencesDueCount || 0,
         words_learned: wordsLearnedCount || 0,
+        xp_progress: Math.round(xpProgress),
+        xp_needed: xpNeeded,
+        progress_percentage: Math.round(progressPercentage),
       },
     });
 

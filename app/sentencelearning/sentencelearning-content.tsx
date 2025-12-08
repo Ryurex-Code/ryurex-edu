@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CheckCircle2, XCircle, Lightbulb, ArrowLeft, RotateCcw, Home, ChevronRight } from 'lucide-react';
+import { CheckCircle2, XCircle, Lightbulb, ArrowLeft, RotateCcw, Home } from 'lucide-react';
 import ThemeToggle from '@/components/ThemeToggle';
 
 interface SentenceWord {
@@ -41,7 +41,6 @@ export default function SentenceLearningContent() {
   const [isLoading, setIsLoading] = useState(true);
   const [showResultModal, setShowResultModal] = useState(false);
   const [isSubmittingResults, setIsSubmittingResults] = useState(false);
-  const [hasNextPart, setHasNextPart] = useState(false);
 
   // Reset all game state when category or subcategory changes
   useEffect(() => {
@@ -55,7 +54,6 @@ export default function SentenceLearningContent() {
     setIsLoading(true);
     setShowResultModal(false);
     setIsSubmittingResults(false);
-    setHasNextPart(false);
   }, [category, subcategory]);
 
   // Fetch sentences on mount - REQUIRED category and subcategory
@@ -209,25 +207,6 @@ export default function SentenceLearningContent() {
 
       const data = await response.json();
       console.log('✅ Batch submission success:', data);
-
-      // Check if next part exists before showing modal
-      try {
-        const nextSubcategory = parseInt(String(subcategory)) + 1;
-        const checkResponse = await fetch(`/api/subcategories?category=${encodeURIComponent(category || '')}`);
-        
-        if (checkResponse.ok) {
-          const checkData = await checkResponse.json();
-          const nextPartExists = checkData.subcategories?.some(
-            (sub: { subcategory: number; sentence_count?: number; word_count?: number }) => 
-              sub.subcategory === nextSubcategory && (sub.sentence_count || 0) > 0
-          );
-          setHasNextPart(!!nextPartExists);
-          console.log('Next part exists:', nextPartExists);
-        }
-      } catch (error) {
-        console.error('Error checking next part:', error);
-        setHasNextPart(false);
-      }
 
       setShowResultModal(true);
     } catch (error) {
@@ -544,24 +523,14 @@ export default function SentenceLearningContent() {
       {showResultModal && (
         <ResultModal
           results={gameResults}
-          category={category || ''}
-          subcategory={subcategory || ''}
-          hasNextPart={hasNextPart}
           onClose={() => router.push(`/category-menu/${category}`)}
           onPlayAgain={() => {
             setShowResultModal(false);
             setIsLoading(true);
             setCurrentIndex(0);
             setGameResults([]);
-            setHasNextPart(false);
             resetQuestion();
             fetchSentences();
-          }}
-          onNextPart={(nextSubcategory) => {
-            setShowResultModal(false);
-            setIsLoading(true);
-            const url = `/sentencelearning?category=${encodeURIComponent(category || '')}&subcategory=${nextSubcategory}`;
-            window.location.href = url;
           }}
         />
       )}
@@ -572,19 +541,12 @@ export default function SentenceLearningContent() {
 // Result Modal Component
 function ResultModal({
   results,
-  subcategory,
-  hasNextPart,
   onClose,
   onPlayAgain,
-  onNextPart,
 }: {
   results: GameResult[];
-  category: string;
-  subcategory: string | number;
-  hasNextPart: boolean;
   onClose: () => void;
   onPlayAgain: () => void;
-  onNextPart: (nextSubcategory: number) => void;
 }) {
   const correctCount = results.filter((r) => r.correct).length;
   const accuracy = ((correctCount / results.length) * 100).toFixed(0);
@@ -611,87 +573,54 @@ function ResultModal({
         onClick={(e) => e.stopPropagation()}
         className="border-2 border-primary-yellow rounded-3xl p-8 max-w-md w-full shadow-2xl bg-card-darker"
       >
-        <div className="text-center space-y-6">
-          {/* Title */}
-          <div className="space-y-2">
-            <h2 className="text-3xl font-bold text-white">
-              Session Complete!
-            </h2>
-            <p className="text-gray-400">
-              Great job on finishing {results.length} questions
-            </p>
-          </div>
+        <div className="text-center">
+          <h2 className="text-3xl font-bold text-primary-yellow mb-6">Session Complete! 🎉</h2>
 
-          {/* Stats */}
-          <div className="space-y-4">
-            {/* XP Gained - Large Card */}
-            <div className="bg-primary-yellow rounded-2xl p-6">
-              <p className="text-black/70 text-sm font-semibold">Total XP Gained</p>
-              <p className="text-5xl font-bold text-black">+{xpGained}</p>
+          {/* Stats Grid */}
+          <div className="space-y-4 mb-8">
+            <div className="bg-card p-4 rounded-xl border border-theme">
+              <p className="text-text-secondary text-sm mb-1">Accuracy</p>
+              <p className="text-3xl font-bold text-primary-yellow">{accuracy}%</p>
             </div>
 
-            {/* Accuracy & Correct/Wrong Grid */}
             <div className="grid grid-cols-2 gap-4">
-              <div className="rounded-xl p-4 bg-card-darker border border-gray-700">
-                <p className="text-xs mb-1 text-gray-400">
-                  Accuracy
-                </p>
-                <p className="text-3xl font-bold text-white">
-                  {accuracy}%
-                </p>
-                <p className="text-gray-500 text-xs mt-1">{correctCount}/{results.length} correct</p>
+              <div className="bg-card p-4 rounded-xl border border-theme">
+                <p className="text-text-secondary text-sm mb-1">Correct</p>
+                <p className="text-2xl font-bold text-green-400">{correctCount}</p>
               </div>
+              <div className="bg-card p-4 rounded-xl border border-theme">
+                <p className="text-text-secondary text-sm mb-1">Wrong</p>
+                <p className="text-2xl font-bold text-red-400">{results.length - correctCount}</p>
+              </div>
+            </div>
 
-              <div className="rounded-xl p-4 bg-card-darker border border-gray-700">
-                <p className="text-xs mb-1 text-gray-400">
-                  Avg Hints
-                </p>
-                <p className="text-3xl font-bold text-white">
-                  {(results.reduce((sum, r) => sum + r.hintClickCount, 0) / results.length).toFixed(1)}
-                </p>
-                <p className="text-gray-500 text-xs mt-1">per question</p>
-              </div>
+            <div className="bg-secondary-purple/20 p-4 rounded-xl border border-secondary-purple">
+              <p className="text-text-secondary text-sm mb-1">XP Earned</p>
+              <p className="text-3xl font-bold text-secondary-purple">+{xpGained}</p>
             </div>
           </div>
 
-          {/* Buttons - Icon Only */}
-          <div className="flex items-center justify-center gap-4 pt-2">
-            {/* Play Again */}
-            <button
+          {/* Action Buttons */}
+          <div className="space-y-3">
+            <motion.button
               onClick={onPlayAgain}
-              title="Play Again"
-              className="p-4 bg-primary-yellow text-black rounded-full hover:bg-primary-yellow-hover hover:scale-110 transition-all shadow-lg cursor-pointer"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="w-full py-4 bg-primary-yellow text-black rounded-2xl font-bold flex items-center justify-center gap-2 hover:shadow-lg transition-all cursor-pointer"
             >
-              <RotateCcw className="w-6 h-6" />
-            </button>
+              <RotateCcw className="w-5 h-5" />
+              Play Again
+            </motion.button>
 
-            {/* Next Part */}
-            <button
-              onClick={() => {
-                if (hasNextPart) {
-                  const nextSubcategory = parseInt(String(subcategory)) + 1;
-                  onNextPart(nextSubcategory);
-                }
-              }}
-              disabled={!hasNextPart}
-              title={hasNextPart ? "Next Part" : "No more parts available"}
-              className={`p-4 rounded-full border-2 transition-all shadow-lg ${
-                hasNextPart
-                  ? 'cursor-pointer hover:scale-110 bg-card border-primary-yellow text-primary-yellow hover:bg-primary-yellow/10'
-                  : 'cursor-not-allowed opacity-50 bg-card border-gray-600 text-gray-600'
-              }`}
-            >
-              <ChevronRight className="w-6 h-6" />
-            </button>
-
-            {/* Back to Menu */}
-            <button
+            <motion.button
               onClick={onClose}
-              title="Back to Menu"
-              className="p-4 rounded-full border-2 border-gray-600 text-gray-400 hover:border-gray-400 hover:text-gray-300 transition-all hover:scale-110 shadow-lg cursor-pointer bg-card"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="w-full py-4 bg-card border-2 border-theme text-text-primary rounded-2xl font-bold flex items-center justify-center gap-2 hover:border-primary-yellow transition-all cursor-pointer"
             >
-              <Home className="w-6 h-6" />
-            </button>
+              <Home className="w-5 h-5" />
+              Back to Category
+            </motion.button>
           </div>
         </div>
       </motion.div>

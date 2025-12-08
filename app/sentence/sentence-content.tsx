@@ -55,33 +55,15 @@ export default function SentenceModeContent() {
         const data = await response.json();
         console.log('📚 Fetched sentence batch:', data);
         console.log(`📊 Total sentences received: ${data.count}`);
-        console.log(`📋 Data structure - words present:`, !!data.words, 'sentences present:', !!data.sentences);
 
-        let allSentences: SentenceWord[] = [];
-        if (data.words && Array.isArray(data.words)) {
-          if (data.words.length === 0) {
+        if (data.sentences && Array.isArray(data.sentences)) {
+          if (data.sentences.length === 0) {
             console.log('📭 No sentences due today');
-            if (isMounted) {
-              setSentences([]);
-            }
           } else {
-            console.log(`✅ Setting ${data.words.length} sentences (max 10 per game)`);
-            allSentences = data.words;
-            if (isMounted) {
-              setSentences(allSentences.slice(0, 10));
-            }
+            setSentences(data.sentences);
           }
-        } else if (data.sentences && Array.isArray(data.sentences)) {
-          console.log(`✅ Setting ${data.sentences.length} sentences (max 10 per game)`);
-          allSentences = data.sentences;
-          if (isMounted) {
-            setSentences(allSentences.slice(0, 10));
-          }
-        } else {
-          console.warn('⚠️ Unexpected data structure:', Object.keys(data));
-          if (isMounted) {
-            setSentences([]);
-          }
+        } else if (data.words && Array.isArray(data.words)) {
+          setSentences(data.words);
         }
 
         if (isMounted) setIsLoading(false);
@@ -116,7 +98,7 @@ export default function SentenceModeContent() {
           alert('No sentences available today. Come back later!');
           router.push('/dashboard');
         } else {
-          setSentences(data.words.slice(0, 10));
+          setSentences(data.words);
         }
       }
 
@@ -304,10 +286,9 @@ export default function SentenceModeContent() {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <div className="text-center max-w-md">
-          <div className="text-6xl mb-4">🎉</div>
-          <h2 className="text-2xl font-bold text-text-primary mb-2">Great Job!</h2>
+          <p className="text-text-primary text-2xl font-bold mb-2">No Sentences Available</p>
           <p className="text-text-secondary mb-6">
-            You&apos;ve reviewed all sentences due for today. Come back tomorrow for more practice, or check your dashboard for stats!
+            All your sentences are done for today! Come back tomorrow for more practice.
           </p>
           <button
             onClick={() => router.push('/dashboard')}
@@ -333,23 +314,15 @@ export default function SentenceModeContent() {
       <div className="border-b border-text-secondary/10">
         <div className="max-w-4xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex-1">
-              <button
-                onClick={() => router.push('/dashboard')}
-                className="flex items-center gap-2 text-text-secondary hover:text-primary-yellow transition-colors cursor-pointer"
-              >
-                <ArrowLeft className="w-5 h-5" />
-                <span>Back</span>
-              </button>
-            </div>
-
-            {/* Progress - Center */}
-            <div className="flex-1 text-center text-text-secondary">
-              Question <span className="text-primary-yellow font-bold">{currentIndex + 1}</span> / {sentences.length}
-            </div>
-
-            {/* Spacer - Right */}
-            <div className="flex-1" />
+            <button
+              onClick={() => router.push('/dashboard')}
+              className="flex items-center gap-2 text-text-secondary hover:text-primary-yellow transition-colors cursor-pointer"
+            >
+              <ArrowLeft className="w-5 h-5" />
+              <span>Back to Dashboard</span>
+            </button>
+            <h1 className="text-xl font-bold text-text-primary">Sentence Mode</h1>
+            <div className="w-20" />
           </div>
         </div>
       </div>
@@ -496,7 +469,6 @@ export default function SentenceModeContent() {
           results={gameResults}
           onClose={() => router.push('/dashboard')}
           onPlayAgain={() => {
-            // Fetch fresh sentences from API again
             setShowResultModal(false);
             setIsLoading(true);
             setCurrentIndex(0);

@@ -45,11 +45,23 @@ export async function GET() {
       // Get vocab IDs for this category
       const { data: vocabData } = await supabase
         .from('vocab_master')
-        .select('id')
+        .select('id, subcategory')
         .eq('category', cat);
 
       const vocabIds = vocabData?.map(v => v.id) || [];
       const count = vocabIds.length;
+
+      // Get max subcategory for this category
+      const maxSubcategory = vocabData && vocabData.length > 0
+        ? Math.max(...vocabData.map(v => v.subcategory || 1))
+        : 1;
+
+      // Check if this category has sentence data
+      const { count: sentenceCount } = await supabase
+        .from('vocab_master')
+        .select('*', { count: 'exact' })
+        .eq('category', cat)
+        .not('sentence_english', 'is', null);
 
       // Get learned count for this category
       const { count: learnedCount } = await supabase
@@ -59,7 +71,13 @@ export async function GET() {
         .in('vocab_id', vocabIds)
         .gt('fluency', 0);
 
-      return { category: cat, count, learnedCount: learnedCount || 0 };
+      return { 
+        category: cat, 
+        count, 
+        learnedCount: learnedCount || 0, 
+        subcategoryCount: maxSubcategory,
+        hasSentences: (sentenceCount || 0) > 0
+      };
     });
 
     const categoryStats = await Promise.all(categoryStatsPromises);
@@ -82,6 +100,8 @@ export async function GET() {
       name: stat.category,
       count: stat.count,
       learned_count: stat.learnedCount,
+      subcategoryCount: stat.subcategoryCount,
+      hasSentences: stat.hasSentences,
       icon: categoryIcons[stat.category] || '📚',
     }));
 

@@ -432,36 +432,36 @@ export default function VocabGameContent() {
 
       {/* Header */}
       <div className="border-b border-text-secondary/10">
-        <div className="max-w-4xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between mb-3">
+        <div className="max-w-4xl mx-auto px-3 sm:px-4 py-3 sm:py-4">
+          <div className="flex items-center justify-between mb-2 sm:mb-3 gap-2">
             <div className="flex-1">
               <button
                 onClick={() => router.push(`/category-menu/${category}`)}
-                className="flex items-center gap-2 text-text-secondary hover:text-primary-yellow transition-colors cursor-pointer"
+                className="flex items-center gap-2 text-text-secondary hover:text-primary-yellow transition-colors cursor-pointer text-sm sm:text-base"
               >
-                <ArrowLeft className="w-5 h-5" />
+                <ArrowLeft className="w-4 sm:w-5 h-4 sm:h-5" />
                 <span>Back</span>
               </button>
             </div>
 
             {/* Progress - Center */}
-            <div className="flex-1 text-center text-text-secondary">
+            <div className="flex-1 text-center text-text-secondary text-xs sm:text-sm">
               Question <span className="text-primary-yellow font-bold">{currentIndex + 1}</span> / {words.length}
             </div>
 
             {/* Timer - Right */}
-            <div className="flex-1 flex items-center justify-end gap-2 text-text-secondary">
-              <Clock className="w-5 h-5" />
+            <div className="flex-1 flex items-center justify-end gap-1 sm:gap-2 text-text-secondary text-xs sm:text-sm">
+              <Clock className="w-4 sm:w-5 h-4 sm:h-5" />
               <span className="font-mono">{timer}s</span>
             </div>
           </div>
 
           {/* Category & Subcategory Badges */}
-          <div className="flex items-center justify-center gap-2">
-            <span className="inline-block px-4 py-1 bg-secondary-purple text-white text-sm font-semibold rounded-full capitalize">
+          <div className="flex items-center justify-center gap-2 flex-wrap">
+            <span className="inline-block px-2 sm:px-4 py-1 bg-secondary-purple text-white text-xs sm:text-sm font-semibold rounded-full capitalize">
               {category}
             </span>
-            <span className="inline-block px-4 py-1 bg-primary-yellow text-black text-sm font-semibold rounded-full">
+            <span className="inline-block px-2 sm:px-4 py-1 bg-primary-yellow text-black text-xs sm:text-sm font-semibold rounded-full">
               Part {subcategory}
             </span>
           </div>
@@ -469,7 +469,7 @@ export default function VocabGameContent() {
       </div>
 
       {/* Progress Bar */}
-      <div className="max-w-4xl mx-auto px-4 mt-4">
+      <div className="max-w-4xl mx-auto px-3 sm:px-4 mt-3 sm:mt-4">
         <div className="h-2 bg-surface rounded-full overflow-hidden">
           <motion.div
             className="h-full bg-primary-yellow"
@@ -481,7 +481,7 @@ export default function VocabGameContent() {
       </div>
 
       {/* Main Game Area */}
-      <div className="max-w-4xl mx-auto px-4 py-12">
+      <div className="max-w-4xl mx-auto px-3 sm:px-4 py-6 sm:py-12">
         <AnimatePresence mode="wait">
           <motion.div
             key={currentIndex}
@@ -493,8 +493,8 @@ export default function VocabGameContent() {
           >
             {/* Question */}
             <div className="text-center">
-              <p className="text-text-secondary text-sm mb-2">Translate this word to English:</p>
-              <h1 className="text-5xl font-bold text-text-primary mb-2">{currentWord.indo}</h1>
+              <p className="text-text-secondary text-xs sm:text-sm mb-2">Translate this word to English:</p>
+              <h1 className="text-2xl sm:text-3xl md:text-5xl font-bold text-text-primary mb-2">{currentWord.indo}</h1>
               <div className="flex items-center justify-center gap-2">
                 {currentWord.class && (
                   <span className="inline-block px-3 py-1 bg-primary-yellow text-black text-xs font-semibold rounded-full">
@@ -525,13 +525,13 @@ export default function VocabGameContent() {
                 
                 {/* Visual underscore display */}
                 <div 
-                  className="bg-surface px-8 py-6 rounded-xl border-2 border-text-secondary/20 hover:border-primary-yellow/50 transition-colors cursor-text"
+                  className="bg-surface px-4 sm:px-8 py-4 sm:py-6 rounded-xl border-2 border-text-secondary/20 hover:border-primary-yellow/50 transition-colors cursor-text"
                   onClick={() => {
                     const input = document.querySelector('input[type="text"]') as HTMLInputElement;
                     if (input) input.focus();
                   }}
                 >
-                  <p className="text-4xl font-mono tracking-widest select-none">
+                  <p className="text-2xl sm:text-3xl md:text-4xl font-mono tracking-widest select-none">
                     {renderUnderscoreDisplay()}
                   </p>
                 </div>

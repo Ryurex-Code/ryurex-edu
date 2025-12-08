@@ -180,9 +180,93 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- ============================================
+-- Table 4: pvp_lobbies (PvP Game Lobbies)
+-- ============================================
+CREATE TABLE IF NOT EXISTS public.pvp_lobbies (
+  id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+  
+  -- Players
+  host_user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  joined_user_id uuid REFERENCES public.users(id) ON DELETE SET NULL,
+  
+  -- Game Configuration
+  game_code text NOT NULL UNIQUE,
+  category text NOT NULL,
+  subcategory smallint NOT NULL,  -- 0 = random, 1-5 = custom
+  num_questions smallint NOT NULL CHECK (num_questions >= 1),
+  timer_duration smallint NOT NULL CHECK (timer_duration >= 5),
+  game_mode text NOT NULL,  -- 'vocab' atau 'sentence'
+  random_seed text,  -- Untuk random mode consistency
+  
+  -- Game Status
+  status text DEFAULT 'waiting',
+    -- 'waiting' = menunggu player 2 join
+    -- 'opponent_joined' = player 2 joined, waiting host approval
+    -- 'ready' = kedua player ready
+    -- 'in_progress' = game sedang berjalan
+    -- 'finished' = game selesai
+  host_approved boolean,
+  player2_ready boolean DEFAULT false,
+  
+  -- Scores
+  host_score integer,
+  joined_score integer,
+  
+  -- Timestamps
+  created_at timestamp with time zone DEFAULT now(),
+  started_at timestamp with time zone,
+  finished_at timestamp with time zone,
+  expires_at timestamp with time zone
+);
+
+-- Indexes for pvp_lobbies
+CREATE INDEX IF NOT EXISTS idx_pvp_lobbies_host_user_id ON public.pvp_lobbies(host_user_id);
+CREATE INDEX IF NOT EXISTS idx_pvp_lobbies_joined_user_id ON public.pvp_lobbies(joined_user_id);
+CREATE INDEX IF NOT EXISTS idx_pvp_lobbies_game_code ON public.pvp_lobbies(game_code);
+CREATE INDEX IF NOT EXISTS idx_pvp_lobbies_status ON public.pvp_lobbies(status);
+CREATE INDEX IF NOT EXISTS idx_pvp_lobbies_created_at ON public.pvp_lobbies(created_at DESC);
+
+-- ============================================
+-- Row Level Security (RLS) for pvp_lobbies
+-- ============================================
+ALTER TABLE public.pvp_lobbies ENABLE ROW LEVEL SECURITY;
+
+-- Players can view lobbies they're involved in
+CREATE POLICY "Players can view their lobbies"
+  ON public.pvp_lobbies FOR SELECT
+  USING (
+    auth.uid() = host_user_id 
+    OR auth.uid() = joined_user_id
+    OR status = 'waiting'  -- Anyone can view waiting lobbies to join
+  );
+
+-- Host can insert lobbies
+CREATE POLICY "Users can create lobbies"
+  ON public.pvp_lobbies FOR INSERT
+  WITH CHECK (auth.uid() = host_user_id);
+
+-- Host can update their lobby
+CREATE POLICY "Host can update their lobby"
+  ON public.pvp_lobbies FOR UPDATE
+  USING (auth.uid() = host_user_id);
+
+-- Player 2 can join (update joined_user_id and status)
+CREATE POLICY "Player 2 can join lobby"
+  ON public.pvp_lobbies FOR UPDATE
+  USING (
+    auth.uid() != host_user_id  -- Not the host
+    AND (joined_user_id IS NULL OR joined_user_id = auth.uid())  -- Either no one joined yet, or it's the same user
+  )
+  WITH CHECK (
+    joined_user_id = auth.uid()  -- Only allow setting joined_user_id to current user
+  );
+
+-- ============================================
 -- NOTES
 -- ============================================
 -- 1. Run this SQL in Supabase SQL Editor
 -- 2. Make sure to seed vocab_master table (see seed_vocab_data.sql)
 -- 3. Test RLS policies by querying as authenticated user
 -- 4. User profile is auto-created when user signs up
+-- 5. PvP lobbies expire after 5 minutes if no one joins
+-- 6. Scores are calculated locally on client, submitted to server at game end
