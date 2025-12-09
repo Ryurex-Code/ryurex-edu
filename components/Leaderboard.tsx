@@ -99,8 +99,8 @@ export default function Leaderboard() {
       <div className="bg-primary-yellow px-6 py-4">
         <div className="flex items-center gap-2">
           <Trophy className="w-6 h-6 text-black" />
-          <h3 className="text-lg font-bold text-black">Top Players</h3>
-          <span className="text-sm text-black/70 ml-auto">Your rank: #{userRank}</span>
+          <h3 className="text-heading-3 text-black">Top Players</h3>
+          <span className="text-label text-black/70 ml-auto">Your rank: #{userRank}</span>
         </div>
       </div>
 
@@ -141,7 +141,7 @@ export default function Leaderboard() {
 
                 {/* User Info */}
                 <div className="flex-grow min-w-0">
-                  <p className="font-semibold text-sm truncate">
+                  <p className="font-semibold text-label truncate">
                     {entry.display_name}
                     {isCurrentUser && (
                       <span className="ml-2 px-1.5 py-0.5 bg-primary-yellow text-black text-xs font-bold rounded">
@@ -153,7 +153,7 @@ export default function Leaderboard() {
 
                 {/* XP Display */}
                 <div className="text-right flex-shrink-0">
-                  <p className="font-bold text-sm text-primary-yellow">
+                  <p className="font-bold text-label text-primary-yellow">
                     {entry.xp.toLocaleString()}
                   </p>
                 </div>
@@ -180,12 +180,12 @@ export default function Leaderboard() {
 
               {/* User Info */}
               <div className="flex-grow">
-                <p className="font-semibold text-sm">{currentUser.display_name}</p>
+                <p className="font-semibold text-label">{currentUser.display_name}</p>
               </div>
 
               {/* XP */}
               <div className="text-right flex-shrink-0">
-                <p className="font-bold text-sm text-primary-yellow">
+                <p className="font-bold text-label text-primary-yellow">
                   {currentUser.xp.toLocaleString()}
                 </p>
               </div>

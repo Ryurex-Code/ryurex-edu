@@ -60,7 +60,7 @@ export default function ForgotPasswordPage() {
           {/* Back Link */}
           <Link 
             href="/login" 
-            className="inline-flex items-center gap-2 text-muted-foreground hover:text-[#fee801] transition-colors mb-6"
+            className="inline-flex items-center gap-2 text-muted-foreground hover:text-primary-yellow transition-colors mb-6"
           >
             <ArrowLeft className="w-4 h-4" />
             <span className="text-sm">Back to Login</span>
@@ -72,7 +72,7 @@ export default function ForgotPasswordPage() {
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ delay: 0.2, type: 'spring' }}
-              className="inline-flex items-center justify-center w-16 h-16 bg-[#7c5cff] border-2 border-[#7c5cff] rounded-2xl mb-4"
+              className="inline-flex items-center justify-center w-16 h-16 bg-secondary-purple border-2 border-secondary-purple rounded-2xl mb-4"
             >
               <KeyRound className="w-8 h-8 text-white" />
             </motion.div>
@@ -96,7 +96,7 @@ export default function ForgotPasswordPage() {
               </div>
               <h3 className="text-xl font-bold text-foreground mb-2">Check Your Email!</h3>
               <p className="text-muted-foreground text-sm mb-6">
-                We&apos;ve sent password reset instructions to <span className="text-[#fee801] font-semibold">{email}</span>
+                We&apos;ve sent password reset instructions to <span className="text-primary-yellow font-semibold">{email}</span>
               </p>
               <p className="text-xs text-muted-foreground mb-4">
                 Didn&apos;t receive the email? Check your spam folder or try again.
@@ -106,7 +106,7 @@ export default function ForgotPasswordPage() {
                   setSuccess(false);
                   setEmail('');
                 }}
-                className="text-[#fee801] hover:text-[#D4AF37] text-sm font-semibold transition-colors"
+                className="text-primary-yellow hover:text-primary-yellow/80 text-sm font-semibold transition-colors"
               >
                 Try another email
               </button>
@@ -151,7 +151,7 @@ export default function ForgotPasswordPage() {
                   whileTap={{ scale: 0.98 }}
                   type="submit"
                   disabled={loading}
-                  className="w-full py-3 bg-gradient-to-r from-[#7c5cff] to-[#9575ff] text-white rounded-lg font-semibold hover:shadow-lg hover:shadow-[#7c5cff]/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                  className="w-full py-3 bg-secondary-purple hover:bg-secondary-purple/90 text-white rounded-lg font-semibold hover:shadow-lg hover:shadow-secondary-purple/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                 >
                   {loading ? 'Sending...' : 'Send Reset Link'}
                 </motion.button>
@@ -161,7 +161,7 @@ export default function ForgotPasswordPage() {
               <div className="mt-6 text-center">
                 <p className="text-sm text-muted-foreground">
                   Remember your password?{' '}
-                  <Link href="/login" className="text-[#fee801] hover:text-[#D4AF37] hover:underline font-semibold transition-colors">
+                  <Link href="/login" className="text-primary-yellow hover:text-primary-yellow/80 hover:underline font-semibold transition-colors">
                     Log In
                   </Link>
                 </p>
