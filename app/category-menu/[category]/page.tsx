@@ -233,8 +233,38 @@ export default function CategoryMenuPage() {
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      {/* Mobile Floating Action Buttons */}
+      {selectedSubcategory !== null && (
+        <motion.div
+          initial={{ y: 100, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          exit={{ y: 100, opacity: 0 }}
+          className="lg:hidden fixed bottom-0 left-0 right-0 bg-gradient-to-t from-background via-background/95 to-background/0 pt-4 pb-6 px-4 space-y-3 z-30"
+        >
+          {/* Vocab Mode Button */}
+          <button
+            onClick={handlePlayVocab}
+            className="w-full py-4 rounded-2xl font-bold text-body-lg flex items-center justify-center gap-3 transition-all cursor-pointer bg-primary-yellow text-black border-2 border-black hover:scale-105 hover:shadow-lg active:scale-95"
+          >
+            <Play className="w-5 h-5" />
+            Play Vocab Mode
+          </button>
+
+          {/* Sentence Mode Button - Only show if sentences available */}
+          {sentenceAvailability[selectedSubcategory] && (
+            <button
+              onClick={handlePlaySentence}
+              className="w-full py-4 rounded-2xl font-bold text-body-lg flex items-center justify-center gap-3 transition-all cursor-pointer bg-secondary-purple text-white border-2 border-black hover:scale-105 hover:shadow-lg active:scale-95"
+            >
+              <Play className="w-5 h-5" />
+              Play Sentence Mode
+            </button>
+          )}
+        </motion.div>
+      )}
+
+      {/* Main Content - Add padding-bottom for mobile floating buttons */}
+      <div className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 ${selectedSubcategory !== null ? 'lg:pb-12 pb-40' : 'pb-12'}`}>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Left Side - Subcategory Cards */}
           <div className="lg:col-span-2 space-y-4">
@@ -300,7 +330,7 @@ export default function CategoryMenuPage() {
           </div>
 
           {/* Right Side - Category Info & Play Buttons */}
-          <div className="lg:col-span-1">
+          <div className="hidden lg:block lg:col-span-1">
             <div className="sticky top-8 space-y-6">
               {/* Category Card */}
               <motion.div

@@ -580,7 +580,6 @@ export default function VocabPage() {
       {showResultModal && (
         <ResultModal
           results={gameResults}
-          words={words}
           onClose={() => router.push('/dashboard')}
           onPlayAgain={() => {
             setShowResultModal(false);
@@ -603,7 +602,6 @@ function ResultModal({
   onPlayAgain,
 }: {
   results: GameResult[];
-  words?: VocabWord[];
   onClose: () => void;
   onPlayAgain: () => void;
 }) {

@@ -216,7 +216,7 @@ export default function UpdatePasswordPage() {
                   whileTap={{ scale: 0.98 }}
                   type="submit"
                   disabled={loading}
-                  className="w-full py-3 bg-gradient-to-r from-[#E2B714] to-[#D4AF37] text-[#0f1115] rounded-lg font-semibold hover:shadow-lg hover:shadow-[#E2B714]/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                  className="w-full py-3 bg-primary-yellow hover:bg-primary-yellow/90 text-black rounded-lg font-semibold hover:shadow-lg hover:shadow-primary-yellow/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                 >
                   {loading ? 'Updating Password...' : 'Update Password'}
                 </motion.button>

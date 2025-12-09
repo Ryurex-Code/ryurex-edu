@@ -681,7 +681,6 @@ function ResultModal({
   onNextPart,
 }: {
   results: GameResult[];
-  words?: VocabWord[];
   subcategory: string | number;
   hasNextPart: boolean;
   onClose: () => void;

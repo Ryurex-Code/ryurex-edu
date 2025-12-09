@@ -6,7 +6,6 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { BarChart3, BookOpen, LogOut, Play, Clock, Search, Edit2, Zap, Menu, X, Sword } from 'lucide-react';
-import type { User as SupabaseUser } from '@supabase/supabase-js';
 import ThemeToggle from '@/components/ThemeToggle';
 import EditDisplayNameModal from '@/components/EditDisplayNameModal';
 import Leaderboard from '@/components/Leaderboard';
@@ -46,7 +45,6 @@ interface Category {
 }
 
 export default function DashboardPage() {
-  const [, setUser] = useState<SupabaseUser | null>(null);
   const [userStats, setUserStats] = useState<UserStats | null>(null);
   const [displayName, setDisplayName] = useState('');
   const [categories, setCategories] = useState<Category[]>([]);
@@ -63,7 +61,6 @@ export default function DashboardPage() {
     const fetchData = async () => {
       // Get authenticated user
       const { data: { user } } = await supabase.auth.getUser();
-      if (isMounted) setUser(user);
 
       if (user) {
         // Fetch user stats from API

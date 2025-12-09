@@ -31,7 +31,6 @@ export default function PvPResultPage() {
   const lobbyId = params.lobbyId as string;
   const supabase = createClient();
 
-  const [user] = useState<{ id: string } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [resultData, setResultData] = useState<ResultData | null>(null);
   const [userRole, setUserRole] = useState<'host' | 'joined' | null>(null);

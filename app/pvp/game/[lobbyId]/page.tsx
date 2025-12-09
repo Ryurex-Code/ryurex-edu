@@ -59,7 +59,6 @@ export default function PvPGamePage() {
     totalScore: number;
   } | null>(null);
 
-  const [user] = useState<{ id: string } | null>(null);
   const [lobbData, setLobbyData] = useState<{
     id: string;
     game_mode: string;
