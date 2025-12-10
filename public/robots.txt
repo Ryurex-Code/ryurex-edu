@@ -8,8 +8,6 @@ Allow: /forgot-password
 # Disallow authenticated pages
 Disallow: /dashboard
 Disallow: /vocab
-Disallow: /sentence
-Disallow: /sentencelearning
 Disallow: /vocabgame
 Disallow: /category-menu
 Disallow: /update-password

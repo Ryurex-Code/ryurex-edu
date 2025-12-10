@@ -72,7 +72,6 @@ export default function CategoryMenuPage() {
   const [categoryData, setCategoryData] = useState<CategoryData | null>(null);
   const [selectedSubcategory, setSelectedSubcategory] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
-  const [sentenceAvailability, setSentenceAvailability] = useState<{ [key: number]: boolean }>({});
 
   const fetchCategoryData = useCallback(async () => {
     try {
@@ -120,22 +119,8 @@ export default function CategoryMenuPage() {
               learned_count: learnedCountMap[sub.subcategory] || 0
             }));
           }
+          }
         }
-
-        // Check sentence availability for each subcategory (check vocab_master for sentence_english)
-        const sentenceAvail: { [key: number]: boolean } = {};
-        for (const sub of data.subcategories) {
-          const { data: vocabsWithSentence } = await supabase
-            .from('vocab_master')
-            .select('id')
-            .eq('category', categoryName)
-            .eq('subcategory', sub.subcategory)
-            .not('sentence_english', 'is', null);
-
-          sentenceAvail[sub.subcategory] = (vocabsWithSentence?.length ?? 0) > 0;
-        }
-        setSentenceAvailability(sentenceAvail);
-      }
       
       setCategoryData(data);
     } catch (error) {
@@ -164,9 +149,9 @@ export default function CategoryMenuPage() {
     }
   };
 
-  const handlePlaySentence = () => {
+  const handlePlayAiMode = () => {
     if (selectedSubcategory !== null) {
-      router.push(`/sentencelearning?category=${encodeURIComponent(categoryName)}&subcategory=${selectedSubcategory}`);
+      router.push(`/ai-mode?category=${encodeURIComponent(categoryName)}&subcategory=${selectedSubcategory}`);
     }
   };
 
@@ -221,13 +206,6 @@ export default function CategoryMenuPage() {
             {/* Right Side Actions */}
             <div className="flex items-center space-x-3">
               <ThemeToggle />
-              <button
-                onClick={handleLogout}
-                className="flex items-center space-x-2 px-4 py-2 bg-red-500/10 border border-red-500/20 text-red-400 rounded-lg hover:bg-red-500/20 transition-colors cursor-pointer"
-              >
-                <LogOut className="w-4 h-4" />
-                <span>Logout</span>
-              </button>
             </div>
           </div>
         </div>
@@ -250,16 +228,14 @@ export default function CategoryMenuPage() {
             Play Vocab Mode
           </button>
 
-          {/* Sentence Mode Button - Only show if sentences available */}
-          {sentenceAvailability[selectedSubcategory] && (
-            <button
-              onClick={handlePlaySentence}
-              className="w-full py-4 rounded-2xl font-bold text-body-lg flex items-center justify-center gap-3 transition-all cursor-pointer bg-secondary-purple text-white border-2 border-black hover:scale-105 hover:shadow-lg active:scale-95"
-            >
-              <Play className="w-5 h-5" />
-              Play Sentence Mode
-            </button>
-          )}
+          {/* AI Mode Button */}
+          <button
+            onClick={handlePlayAiMode}
+            className="w-full py-4 rounded-2xl font-bold text-body-lg flex items-center justify-center gap-3 transition-all cursor-pointer bg-black dark:bg-white text-white dark:text-black border-2 border-black dark:border-white hover:scale-105 hover:shadow-lg active:scale-95"
+          >
+            <Play className="w-5 h-5" />
+            Play AI Mode
+          </button>
         </motion.div>
       )}
 
@@ -386,14 +362,15 @@ export default function CategoryMenuPage() {
                   Play Vocab Mode
                 </button>
 
-                {/* Sentence Mode Button - Only show if sentences available */}
-                {selectedSubcategory !== null && sentenceAvailability[selectedSubcategory] && (
+                {/* AI Mode Button */}
+                {selectedSubcategory !== null && (
                   <button
-                    onClick={handlePlaySentence}
+                    onClick={handlePlayAiMode}
                     className="w-full py-4 rounded-2xl font-bold text-body-lg flex items-center justify-center gap-3 transition-all cursor-pointer bg-secondary-purple text-white hover:scale-105 hover:shadow-lg"
                   >
                     <Play className="w-5 h-5" />
-                    Play Sentence Mode
+                    <span>Play Sentence Mode</span>
+                    <span className="bg-primary-yellow text-black px-2 py-0.5 rounded text-label">AI</span>
                   </button>
                 )}
               </div>

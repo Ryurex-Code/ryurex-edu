@@ -7,6 +7,7 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const category = searchParams.get('category');
     const subcategory = searchParams.get('subcategory');
+    const isPvP = searchParams.get('isPvP') === 'true'; // New parameter for PvP mode
 
     // Validate required parameters
     if (!category || !subcategory) {
@@ -36,7 +37,7 @@ export async function GET(request: NextRequest) {
     // No "due today" filter - just fetch all words for custom learning mode
     const { data: allWords, error: fetchError } = await supabase
       .from('vocab_master')
-      .select('id, indo, english, class, category, subcategory, sentence_english, sentence_indo')
+      .select('id, indo, english, class, category, subcategory')
       .eq('category', category)
       .eq('subcategory', parseInt(subcategory))
       .order('id');
@@ -96,7 +97,7 @@ export async function GET(request: NextRequest) {
     if (newWords.length > 0) {
       const todayStr = new Date().toISOString().split('T')[0];
       
-      const newProgressEntries = newWords.map((word: { id: number; sentence_english?: string; sentence_indo?: string }) => ({
+      const newProgressEntries = newWords.map((word: { id: number }) => ({
         user_id: user.id,
         vocab_id: word.id,
         fluency: 0,
@@ -104,9 +105,6 @@ export async function GET(request: NextRequest) {
         response_avg: 0,
         correct_count: 0,
         wrong_count: 0,
-        // Only initialize sentence fields if vocab has sentence_english
-        fluency_sentence: word.sentence_english ? 0 : null,
-        next_due_sentence: word.sentence_english ? todayStr : null,
       }));
 
       const { error: insertError } = await supabase
@@ -147,11 +145,14 @@ export async function GET(request: NextRequest) {
       selectedWords = reviewWords.slice(0, 10);
     }
 
-    // Shuffle the selected words for variety
-    selectedWords = selectedWords
-      .map(word => ({ word, sort: Math.random() }))
-      .sort((a, b) => a.sort - b.sort)
-      .map(({ word }) => word);
+    // Shuffle the selected words for variety (ONLY for non-PvP mode)
+    // For PvP mode, keep original order to ensure consistency between players
+    if (!isPvP) {
+      selectedWords = selectedWords
+        .map(word => ({ word, sort: Math.random() }))
+        .sort((a, b) => a.sort - b.sort)
+        .map(({ word }) => word);
+    }
 
     console.log(`🎯 Selected ${selectedWords.length} words for practice`);
 

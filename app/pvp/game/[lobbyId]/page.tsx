@@ -64,6 +64,7 @@ export default function PvPGamePage() {
     game_mode: string;
     timer_duration: number;
     category: string;
+    questions_data?: any;
   } | null>(null);
   const [userRole, setUserRole] = useState<'host' | 'joined' | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -90,7 +91,7 @@ export default function PvPGamePage() {
             if (!currentState) return currentState;
             const currentQuestion = currentState.questions[currentState.currentQuestionIndex];
             const correctAnswer =
-              lobbData?.game_mode === 'sentence'
+              lobbData?.game_mode === 'ai'
                 ? (currentQuestion.sentence_english || '')
                 : currentQuestion.english;
 
@@ -178,19 +179,61 @@ export default function PvPGamePage() {
     subcategory: number;
     num_questions: number;
     game_mode: string;
+    questions_data?: any;
   }): Promise<VocabWord[]> => {
     try {
-      const { category, subcategory, num_questions, game_mode } = lobby;
+      const { category, subcategory, num_questions, game_mode, questions_data } = lobby;
 
-      // Use appropriate endpoint based on game_mode
-      const endpoint =
-        game_mode === 'sentence' ? '/api/getCustomSentenceBatch' : '/api/getCustomBatch';
+      // If AI Mode and questions are cached, use them
+      if (game_mode === 'ai' && questions_data) {
+        console.log('📚 Using cached AI questions from lobby');
+        return questions_data;
+      }
 
+      // If AI Mode but no cached questions, fetch from API (fallback)
+      if (game_mode === 'ai') {
+        console.log('⚠️ No cached questions, generating AI sentences...');
+        const sentenceResponse = await fetch('/api/ai/generateSentences', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            category,
+            subcategory,
+          }),
+        });
+
+        if (!sentenceResponse.ok) {
+          console.error('Failed to generate AI sentences, falling back to vocab mode');
+          // Fallback to vocab mode
+          const params = new URLSearchParams();
+          params.append('category', category);
+          params.append('subcategory', subcategory.toString());
+          params.append('isPvP', 'true'); // Add isPvP parameter
+
+          const fallbackResponse = await fetch(`/api/getCustomBatch?${params.toString()}`);
+          if (!fallbackResponse.ok) {
+            throw new Error('Failed to fetch questions');
+          }
+
+          const fallbackData = await fallbackResponse.json();
+          let questions = fallbackData.words || [];
+          questions = questions.slice(0, num_questions);
+          return questions;
+        }
+
+        const sentenceData = await sentenceResponse.json();
+        let questions = sentenceData.words || [];
+        questions = questions.slice(0, num_questions);
+        return questions;
+      }
+
+      // Regular Vocab Mode
       const params = new URLSearchParams();
       params.append('category', category);
       params.append('subcategory', subcategory.toString());
+      params.append('isPvP', 'true'); // Add isPvP parameter to disable shuffle
 
-      const response = await fetch(`${endpoint}?${params.toString()}`);
+      const response = await fetch(`/api/getCustomBatch?${params.toString()}`);
       if (!response.ok) {
         throw new Error('Failed to fetch questions');
       }
@@ -417,9 +460,16 @@ export default function PvPGamePage() {
           {/* Game Mode & Category & Score */}
           <div className="flex items-center justify-between flex-wrap gap-2 mb-2 sm:mb-3">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="inline-block px-2 sm:px-4 py-1 bg-secondary-purple text-white text-label font-semibold rounded-full capitalize">
-                {lobbData.game_mode}
-              </span>
+              {lobbData.game_mode === 'ai' ? (
+                <span className="inline-block px-2 sm:px-4 py-1 bg-secondary-purple text-white text-label font-semibold rounded-full flex items-center gap-1">
+                  Sentence Mode
+                  <span className="bg-primary-yellow text-black px-1.5 py-0.5 rounded text-xs font-normal">AI</span>
+                </span>
+              ) : (
+                <span className="inline-block px-2 sm:px-4 py-1 bg-secondary-purple text-white text-label font-semibold rounded-full capitalize">
+                  {lobbData.game_mode}
+                </span>
+              )}
               <span className="inline-block px-2 sm:px-4 py-1 bg-primary-yellow text-black text-label font-semibold rounded-full">
                 {lobbData.category}
               </span>
@@ -455,6 +505,12 @@ export default function PvPGamePage() {
             gameFinished={gameFinished}
             hintClickCount={hintClickCount}
             onHintClick={() => setHintClickCount(hintClickCount + 1)}
+            onAnswerSubmit={handleAnswerSubmit}
+          />
+        ) : lobbData.game_mode === 'ai' ? (
+          <AIGameDisplay
+            currentQuestion={currentQuestion}
+            gameFinished={gameFinished}
             onAnswerSubmit={handleAnswerSubmit}
           />
         ) : (
@@ -768,6 +824,157 @@ function VocabGameDisplay({
 }
 
 // Sentence Game Display Component
+// AI Game Display Component (for PvP AI Mode)
+function AIGameDisplay({
+  currentQuestion,
+  gameFinished,
+  onAnswerSubmit,
+}: {
+  currentQuestion: VocabWord;
+  gameFinished: boolean;
+  onAnswerSubmit: (answer: string, correctAnswer: string, timeTakenMs: number) => void;
+}) {
+  const [userAnswer, setUserAnswer] = useState('');
+  const [feedback, setFeedback] = useState<'correct' | 'wrong' | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [startTime] = useState(Date.now());
+
+  // Render Indonesian sentence with vocabulary word highlighted
+  const renderSentenceWithBadge = () => {
+    const sentence = currentQuestion.sentence_indo || '';
+    const vocabWordIndo = currentQuestion.indo.toLowerCase();
+    
+    // Split by common separators but keep them
+    const parts = sentence.split(/(\s+|[.,!?;:'"()-])/);
+    
+    return parts.map((part, index) => {
+      if (!part) return null;
+      
+      // Check if this part matches the vocabulary word in Indonesian (case-insensitive)
+      if (part.toLowerCase() === vocabWordIndo) {
+        return (
+          <span key={index} className="inline-block bg-primary-yellow text-black px-2 py-1 rounded font-semibold mx-1">
+            {part}
+          </span>
+        );
+      }
+      
+      return <span key={index}>{part}</span>;
+    });
+  };
+
+  const handleSubmit = () => {
+    if (isSubmitting || !userAnswer.trim() || gameFinished) return;
+
+    setIsSubmitting(true);
+
+    // Validate: split, trim, lowercase each word
+    const userWords = userAnswer
+      .trim()
+      .split(/\s+/)
+      .map((w) => w.toLowerCase().replace(/[.,!?;:'"]/g, ''));
+
+    const correctWords = (currentQuestion.sentence_english || '')
+      .trim()
+      .split(/\s+/)
+      .map((w) => w.toLowerCase().replace(/[.,!?;:'"]/g, ''));
+
+    const isCorrect =
+      userWords.length === correctWords.length &&
+      userWords.every((word, idx) => word === correctWords[idx]);
+
+    setFeedback(isCorrect ? 'correct' : 'wrong');
+
+    // Auto-next after 1.5 seconds
+    setTimeout(() => {
+      const timeTakenMs = Date.now() - startTime;
+      onAnswerSubmit(
+        userAnswer,
+        currentQuestion.sentence_english || '',
+        timeTakenMs
+      );
+      setUserAnswer('');
+      setFeedback(null);
+      setIsSubmitting(false);
+    }, 1500);
+  };
+
+  return (
+    <AnimatePresence mode="wait">
+      <motion.div
+        key={currentQuestion.vocab_id}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -20 }}
+        transition={{ duration: 0.3 }}
+        className="space-y-8"
+      >
+        {/* Question - Indonesian Sentence with Badge */}
+        <div className="bg-card border-2 border-theme rounded-2xl p-4 sm:p-8">
+          <p className="text-label font-semibold text-text-secondary mb-2 uppercase tracking-wide">
+            Complete the sentence (highlighted word must be translated)
+          </p>
+          <p className="text-heading-3 sm:text-heading-1 text-text-primary leading-relaxed break-words">
+            {renderSentenceWithBadge()}
+          </p>
+        </div>
+
+        {/* Input */}
+        <div className="flex flex-col gap-3 sm:gap-4">
+          <input
+            type="text"
+            value={userAnswer}
+            onChange={(e) => setUserAnswer(e.target.value)}
+            onKeyPress={(e) => {
+              if (e.key === 'Enter' && !isSubmitting && !feedback) {
+                handleSubmit();
+              }
+            }}
+            placeholder="Type the English translation..."
+            autoFocus
+            disabled={!!feedback || gameFinished}
+            className="w-full px-4 sm:px-6 py-3 sm:py-4 bg-input border-2 border-input rounded-2xl text-text-primary placeholder:text-text-secondary/50 focus:outline-none focus:border-primary-yellow transition-colors disabled:opacity-50 text-body-sm sm:text-body-lg"
+          />
+
+          <button
+            onClick={handleSubmit}
+            disabled={
+              isSubmitting ||
+              !userAnswer.trim() ||
+              !!feedback ||
+              gameFinished
+            }
+            className="px-4 sm:px-6 py-3 sm:py-4 bg-primary-yellow text-black rounded-xl font-bold hover:scale-105 disabled:opacity-50 disabled:hover:scale-100 transition-transform cursor-pointer text-body-xs sm:text-body-lg"
+          >
+            {isSubmitting ? 'Checking...' : 'Submit'}
+          </button>
+        </div>
+
+        {/* Feedback */}
+        {feedback && (
+          <motion.div
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className={`text-center py-6 ${
+              feedback === 'correct' ? 'text-green-400' : 'text-red-400'
+            }`}
+          >
+            <div className="text-heading-2 sm:text-heading-1 font-bold break-words">
+              {feedback === 'correct' ? (
+                <>✓ Correct!</>
+              ) : (
+                <>
+                  ✗ Wrong! The answer is: {currentQuestion.sentence_english}
+                </>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </motion.div>
+    </AnimatePresence>
+  );
+}
+
 function SentenceGameDisplay({
   currentQuestion,
   gameFinished,

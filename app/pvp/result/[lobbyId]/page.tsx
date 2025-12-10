@@ -34,6 +34,8 @@ export default function PvPResultPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [resultData, setResultData] = useState<ResultData | null>(null);
   const [userRole, setUserRole] = useState<'host' | 'joined' | null>(null);
+  const [isResetting, setIsResetting] = useState(false);
+  const [gameCode, setGameCode] = useState<string>('');
 
   // Fetch result data
   useEffect(() => {
@@ -60,6 +62,9 @@ export default function PvPResultPage() {
           router.push('/pvp');
           return;
         }
+
+        // Store game code for redirect
+        setGameCode(lobby.game_code);
 
         // Determine user role
         const role = authUser.id === lobby.host_user_id ? 'host' : 'joined';
@@ -149,6 +154,32 @@ export default function PvPResultPage() {
 
     fetchResult();
   }, [lobbyId, router, supabase]);
+
+  const handlePlayAgain = async () => {
+    try {
+      setIsResetting(true);
+
+      // Only host calls reset-game API
+      if (userRole === 'host') {
+        const response = await fetch('/api/pvp/reset-game', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ lobbyId }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to reset game');
+        }
+      }
+
+      // Both player 1 and player 2 redirect back to lobby page using game code
+      router.push(`/pvp/lobby/${gameCode}`);
+    } catch (error) {
+      console.error('Error resetting game:', error);
+      alert('Failed to reset game. Please try again.');
+      setIsResetting(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -403,11 +434,12 @@ export default function PvPResultPage() {
         >
           {/* Play Again */}
           <button
-            onClick={() => router.push('/pvp/create')}
-            className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-6 sm:px-8 py-3 sm:py-4 bg-secondary-purple text-white rounded-xl sm:rounded-2xl font-bold text-body-lg hover:bg-secondary-purple/90 transition-all cursor-pointer"
+            onClick={handlePlayAgain}
+            disabled={isResetting}
+            className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-6 sm:px-8 py-3 sm:py-4 bg-secondary-purple text-white rounded-xl sm:rounded-2xl font-bold text-body-lg hover:bg-secondary-purple/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer"
           >
             <RotateCcw className="w-5 h-5" />
-            Play Again
+            {isResetting ? 'Resetting...' : 'Play Again'}
           </button>
 
           {/* Back to Menu */}

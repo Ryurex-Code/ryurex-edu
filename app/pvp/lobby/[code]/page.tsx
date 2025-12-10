@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter, useParams } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Clock, Copy, Check, LogOut, Users, Edit2 } from 'lucide-react';
+import { ArrowLeft, Copy, Check, LogOut, Users, Edit2 } from 'lucide-react';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import ThemeToggle from '@/components/ThemeToggle';
 
@@ -29,7 +29,6 @@ interface LobbyData {
   host_approved: boolean | null;
   player2_ready: boolean;
   created_at: string;
-  expires_at: string;
 }
 
 interface UserProfile {
@@ -49,7 +48,6 @@ export default function LobbyPage() {
   const [joinedProfile, setJoinedProfile] = useState<UserProfile | null>(null);
   const [isHost, setIsHost] = useState(false);
   const [isJoined, setIsJoined] = useState(false);
-  const [timeRemaining, setTimeRemaining] = useState(300); // 5 minutes in seconds
   const [copied, setCopied] = useState(false);
   const [showApprovalPopup, setShowApprovalPopup] = useState(false);
   const [isKicked, setIsKicked] = useState(false);
@@ -61,7 +59,7 @@ export default function LobbyPage() {
     subcategory: 1,
     numQuestions: 1,
     timerDuration: 5,
-    gameMode: 'vocab' as 'vocab' | 'sentence',
+    gameMode: 'vocab' as 'vocab' | 'ai',
   });
   const [maxQuestions, setMaxQuestions] = useState(0);
   const [subcategoryCount, setSubcategoryCount] = useState(0);
@@ -119,19 +117,6 @@ export default function LobbyPage() {
 
     let isMounted = true;
     let interval: NodeJS.Timeout | null = null;
-
-    // Cleanup expired lobbies on mount
-    const cleanupExpiredLobbies = async () => {
-      try {
-        await fetch('/api/pvp/cleanup-expired-lobbies', {
-          method: 'POST',
-        });
-      } catch (error) {
-        console.error('Error cleaning up expired lobbies:', error);
-      }
-    };
-
-    cleanupExpiredLobbies();
 
     const fetchLobby = async () => {
       try {
@@ -246,37 +231,6 @@ export default function LobbyPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, gameCode, supabase, lobbyData?.status]);
 
-  // Countdown timer
-  useEffect(() => {
-    if (!lobbyData) return;
-
-    let isMounted = true;
-    let interval: NodeJS.Timeout | null = null;
-
-    const updateCountdown = () => {
-      if (isMounted && lobbyData) {
-        const now = new Date().getTime();
-        const expiresAt = new Date(lobbyData.expires_at).getTime();
-        const remaining = Math.max(0, Math.floor((expiresAt - now) / 1000));
-
-        setTimeRemaining(remaining);
-
-        // Redirect if expired
-        if (remaining === 0 && isHost) {
-          router.push('/pvp/create');
-        }
-      }
-    };
-
-    updateCountdown();
-    interval = setInterval(updateCountdown, 1000);
-
-    return () => {
-      isMounted = false;
-      if (interval) clearInterval(interval);
-    };
-  }, [lobbyData, isHost, isJoined, router]);
-
   const handleKickedOk = () => {
     router.push('/pvp/join');
   };
@@ -377,21 +331,33 @@ export default function LobbyPage() {
     if (!lobbyData) return;
 
     try {
-      const { error } = await supabase
-        .from('pvp_lobbies')
-        .update({
-          status: 'in_progress',
-          started_at: new Date().toISOString(),
-        })
-        .eq('id', lobbyData.id);
+      console.log('🎮 Starting game with lobby ID:', lobbyData.id);
+      
+      // Call API to generate questions (for AI mode) and start game
+      const response = await fetch('/api/pvp/start-game', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lobbyId: lobbyData.id }),
+      });
 
-      if (error) {
-        console.error('Error starting game:', error);
-      } else {
-        router.push(`/pvp/game/${lobbyData.id}`);
+      console.log('📡 API Response status:', response.status);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        console.error('❌ Error starting game:', errorData.error || errorData);
+        alert(`Failed to start game: ${errorData.error || 'Unknown error'}`);
+        return;
       }
+
+      const data = await response.json();
+      console.log('✅ Game started successfully:', data);
+
+      // Redirect to game page
+      console.log('🔀 Redirecting to game page...');
+      router.push(`/pvp/game/${lobbyData.id}`);
     } catch (error) {
-      console.error('Error:', error);
+      console.error('❌ Error in handleStartGame:', error);
+      alert(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
@@ -417,7 +383,9 @@ export default function LobbyPage() {
             player2_ready: false,
             status: 'waiting',
           })
-          .eq('id', lobbyData.id);
+          .eq('id', lobbyData.id)
+          .select()
+          .single();
 
         if (error) console.error('Error leaving lobby:', error);
       }
@@ -437,7 +405,7 @@ export default function LobbyPage() {
         subcategory: lobbyData.subcategory,
         numQuestions: lobbyData.num_questions,
         timerDuration: lobbyData.timer_duration,
-        gameMode: (lobbyData.game_mode as 'vocab' | 'sentence') || 'vocab',
+        gameMode: (lobbyData.game_mode as 'vocab' | 'ai') || 'vocab',
       });
     }
     setShowEditModal(true);
@@ -535,21 +503,19 @@ export default function LobbyPage() {
   };
 
   const handleGameModeSwipeEnd = (e: React.TouchEvent) => {
-    if (!sentenceAvailable[editForm.category]) return;
-
     const touchEndX = e.changedTouches[0].clientX;
     const diff = touchStartX - touchEndX;
     const threshold = 50;
 
     if (Math.abs(diff) > threshold) {
       if (diff > 0) {
-        // Swiped left -> go to sentence
+        // Swiped left -> go to AI mode
         if (editForm.gameMode === 'vocab') {
-          handleEditFormChange('gameMode', 'sentence');
+          handleEditFormChange('gameMode', 'ai');
         }
       } else {
         // Swiped right -> go to vocab
-        if (editForm.gameMode === 'sentence') {
+        if (editForm.gameMode === 'ai') {
           handleEditFormChange('gameMode', 'vocab');
         }
       }
@@ -627,7 +593,19 @@ export default function LobbyPage() {
               <span className="text-primary-yellow">Battle</span> Lobby
             </h1>
             <p className="text-muted-foreground text-sm sm:text-base">
-              {isHost ? 'Waiting for opponent to join...' : 'Waiting for host to accept...'}
+              {isHost ? (
+                lobbyData?.joined_user_id ? (
+                  lobbyData?.player2_ready ? 'Ready to start!' : 'Waiting for opponent to be ready...'
+                ) : (
+                  'Waiting for opponent to join...'
+                )
+              ) : (
+                lobbyData?.host_approved === true ? (
+                  lobbyData?.player2_ready ? 'You are ready!' : 'Click ready to proceed...'
+                ) : (
+                  'Waiting for host to accept...'
+                )
+              )}
             </p>
           </motion.div>
 
@@ -783,32 +761,41 @@ export default function LobbyPage() {
                       Game Type
                     </label>
                     <div 
-                      className="inline-flex bg-background border border-theme rounded-lg p-1 select-none"
-                      onTouchStart={handleGameModeSwipeStart}
-                      onTouchEnd={handleGameModeSwipeEnd}
+                      className="relative bg-background rounded-lg border border-theme p-1 flex"
                     >
+                      {/* Sliding background */}
+                      <div
+                        className={`absolute top-1 bottom-1 w-1/2 bg-primary-yellow rounded-md transition-all duration-300 ease-out ${
+                          editForm.gameMode === 'ai' ? 'right-1 left-auto' : 'left-1'
+                        }`}
+                      />
+                      
+                      {/* Vocab Button */}
                       <button
+                        type="button"
                         onClick={() => handleEditFormChange('gameMode', 'vocab')}
-                        className={`px-6 py-2 rounded-md font-semibold text-sm transition-all cursor-pointer ${
+                        className={`relative flex-1 py-2 px-4 font-semibold text-sm rounded-md transition-colors duration-300 z-10 cursor-pointer ${
                           editForm.gameMode === 'vocab'
-                            ? 'bg-primary-yellow text-black'
+                            ? 'text-black'
                             : 'text-foreground hover:text-primary-yellow'
                         }`}
                       >
                         Vocab
                       </button>
-                      {sentenceAvailable[editForm.category] && (
-                        <button
-                          onClick={() => handleEditFormChange('gameMode', 'sentence')}
-                          className={`px-6 py-2 rounded-md font-semibold text-sm transition-all cursor-pointer ${
-                            editForm.gameMode === 'sentence'
-                              ? 'bg-primary-yellow text-black'
-                              : 'text-foreground hover:text-primary-yellow'
-                          }`}
-                        >
-                          Sentence
-                        </button>
-                      )}
+
+                      {/* AI Mode Button */}
+                      <button
+                        type="button"
+                        onClick={() => handleEditFormChange('gameMode', 'ai')}
+                        className={`relative flex-1 py-2 px-4 font-semibold text-sm rounded-md transition-colors duration-300 z-10 cursor-pointer flex items-center justify-center gap-1 ${
+                          editForm.gameMode === 'ai'
+                            ? 'text-black'
+                            : 'text-foreground hover:text-primary-yellow'
+                        }`}
+                      >
+                        <span>Sentence Mode</span>
+                        <span className="bg-primary-yellow text-black px-1 py-0.5 rounded text-xs font-bold">AI</span>
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -861,23 +848,6 @@ export default function LobbyPage() {
               </div>
             </motion.div>
 
-            {/* Countdown Card */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="bg-card rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-theme"
-            >
-              <h2 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4 flex items-center gap-2">
-                <Clock className="w-4 sm:w-5 h-4 sm:h-5 text-primary-yellow" />
-                Expires In
-              </h2>
-              <div className="text-3xl sm:text-5xl font-bold text-primary-yellow text-center">
-                {Math.floor(timeRemaining / 60)}:{(timeRemaining % 60).toString().padStart(2, '0')}
-              </div>
-              <p className="text-center text-muted-foreground text-xs sm:text-sm mt-2">
-                Lobby will expire after 5 minutes
-              </p>
-            </motion.div>
           </div>
 
           {/* Players Section */}

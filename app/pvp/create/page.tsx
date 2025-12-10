@@ -21,7 +21,7 @@ interface FormData {
   subcategory: number;
   numQuestions: number;
   timerDuration: number;
-  gameMode: 'vocab' | 'sentence';
+  gameMode: 'vocab' | 'ai';
 }
 
 export default function CreateLobbyPage() {
@@ -29,7 +29,6 @@ export default function CreateLobbyPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [sentenceAvailable, setSentenceAvailable] = useState<{ [key: string]: boolean }>({});
 
   const [formData, setFormData] = useState<FormData>({
     category: '',
@@ -97,13 +96,6 @@ export default function CreateLobbyPage() {
         if (response.ok) {
           const data = await response.json();
           setCategories(data.categories);
-          
-          // Build sentence availability map based on actual data
-          const sentenceMap: { [key: string]: boolean } = {};
-          for (const cat of data.categories) {
-            sentenceMap[cat.name] = cat.hasSentences || false;
-          }
-          setSentenceAvailable(sentenceMap);
         }
       } catch (error) {
         console.error('Error fetching categories:', error);
@@ -190,7 +182,6 @@ export default function CreateLobbyPage() {
 
     try {
       const gameCode = generateGameCode();
-      const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes from now
 
       // Create lobby in database
       const { data, error } = await supabase
@@ -204,7 +195,6 @@ export default function CreateLobbyPage() {
           timer_duration: formData.timerDuration,
           game_mode: formData.gameMode,
           status: 'waiting',
-          expires_at: expiresAt.toISOString(),
         })
         .select()
         .single();
@@ -449,7 +439,7 @@ export default function CreateLobbyPage() {
                     {/* Sliding background */}
                     <div
                       className={`absolute top-1 bottom-1 w-1/2 bg-primary-yellow rounded-md transition-all duration-300 ease-out ${
-                        formData.gameMode === 'sentence' ? 'right-1 left-auto' : 'left-1'
+                        formData.gameMode === 'ai' ? 'right-1 left-auto' : 'left-1'
                       }`}
                     />
                     
@@ -467,23 +457,21 @@ export default function CreateLobbyPage() {
                       Vocab
                     </button>
 
-                    {/* Sentence Button */}
+                    {/* AI Mode Button */}
                     <button
                       type="button"
-                      onClick={() => sentenceAvailable[formData.category] && handleFormChange('gameMode', 'sentence')}
-                      disabled={!sentenceAvailable[formData.category]}
-                      className={`relative flex-1 py-2 px-4 font-semibold text-sm rounded-md transition-colors duration-300 z-10 ${
-                        sentenceAvailable[formData.category]
-                          ? `cursor-pointer ${formData.gameMode === 'sentence' ? 'text-black' : 'text-foreground hover:text-primary-yellow'}`
-                          : 'opacity-50 cursor-not-allowed'
+                      onClick={() => handleFormChange('gameMode', 'ai')}
+                      disabled={false}
+                      className={`relative flex-1 py-2 px-4 font-semibold text-sm rounded-md transition-colors duration-300 z-10 cursor-pointer flex items-center justify-center gap-1 ${
+                        formData.gameMode === 'ai'
+                          ? 'text-black'
+                          : 'text-foreground hover:text-primary-yellow'
                       }`}
                     >
-                      Sentence
+                      <span>Sentence Mode</span>
+                      <span className="bg-primary-yellow text-black px-1 py-0.5 rounded text-xs font-bold">AI</span>
                     </button>
                   </div>
-                  {!sentenceAvailable[formData.category] && (
-                    <p className="text-xs text-yellow-500 mt-3">Sentence mode not available for this category</p>
-                  )}
                 </div>
 
                 {/* Summary */}

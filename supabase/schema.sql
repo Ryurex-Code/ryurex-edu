@@ -195,7 +195,7 @@ CREATE TABLE IF NOT EXISTS public.pvp_lobbies (
   subcategory smallint NOT NULL,  -- 0 = random, 1-5 = custom
   num_questions smallint NOT NULL CHECK (num_questions >= 1),
   timer_duration smallint NOT NULL CHECK (timer_duration >= 5),
-  game_mode text NOT NULL,  -- 'vocab' atau 'sentence'
+  game_mode text NOT NULL,  -- 'vocab', 'ai' (sentence mode with AI), or 'sentence'
   
   -- Game Status
   status text DEFAULT 'waiting',
@@ -233,13 +233,18 @@ CREATE TABLE IF NOT EXISTS public.pvp_lobbies (
   
   -- Timestamps
   created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),  -- For tracking activity (12h inactivity cleanup)
   started_at timestamp with time zone,
-  expires_at timestamp with time zone
+  expires_at timestamp with time zone,
+  
+  -- AI Mode Questions Cache
+  questions_data jsonb  -- Cached AI-generated questions: [{"vocab_id": 1, "indo": "...", "english": "...", "sentence_indo": "...", "sentence_english": "..."}, ...]
 );
 
 -- Indexes for pvp_lobbies
 CREATE INDEX IF NOT EXISTS idx_pvp_lobbies_host_user_id ON public.pvp_lobbies(host_user_id);
 CREATE INDEX IF NOT EXISTS idx_pvp_lobbies_joined_user_id ON public.pvp_lobbies(joined_user_id);
+CREATE INDEX IF NOT EXISTS idx_pvp_lobbies_updated_at_desc ON public.pvp_lobbies(updated_at DESC);  -- For cleanup queries
 CREATE INDEX IF NOT EXISTS idx_pvp_lobbies_game_code ON public.pvp_lobbies(game_code);
 CREATE INDEX IF NOT EXISTS idx_pvp_lobbies_status ON public.pvp_lobbies(status);
 CREATE INDEX IF NOT EXISTS idx_pvp_lobbies_created_at ON public.pvp_lobbies(created_at DESC);

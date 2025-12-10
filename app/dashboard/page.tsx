@@ -5,13 +5,14 @@ import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { BarChart3, BookOpen, LogOut, Play, Clock, Search, Edit2, Zap, Menu, X, Sword, ChevronDown } from 'lucide-react';
+import { BarChart3, BookOpen, LogOut, Play, Clock, Search, Edit2, Zap, Menu, X, Sword, ChevronDown, Brain, ChevronLeft, ChevronRight, Flame } from 'lucide-react';
 import ThemeToggle from '@/components/ThemeToggle';
 import EditDisplayNameModal from '@/components/EditDisplayNameModal';
 import Leaderboard from '@/components/Leaderboard';
 import ScrollToTopButton from '@/components/ScrollToTopButton';
 import Footer from '@/components/Footer';
 import Image from 'next/image';
+import { useTheme } from '@/context/ThemeContext';
 
 // Helper function to convert 'a1-oxford' to 'A1 Oxford'
 const formatCategoryName = (category: string): string => {
@@ -45,6 +46,7 @@ interface Category {
 }
 
 export default function DashboardPage() {
+  const { theme } = useTheme();
   const [userStats, setUserStats] = useState<UserStats | null>(null);
   const [displayName, setDisplayName] = useState('');
   const [categories, setCategories] = useState<Category[]>([]);
@@ -54,6 +56,8 @@ export default function DashboardPage() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isGameModesExpanded, setIsGameModesExpanded] = useState(false);
   const [isLeaderboardExpanded, setIsLeaderboardExpanded] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const CATEGORIES_PER_PAGE = 10;
   const router = useRouter();
   const supabase = createClient();
 
@@ -234,9 +238,9 @@ export default function DashboardPage() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6 mb-8">
           {[
             { icon: BookOpen, label: 'Words Learned', value: userStats?.stats.words_learned || 0, iconBg: 'bg-primary-yellow', iconColor: 'text-black' },
-            { icon: Clock, label: 'Words Due Today', value: userStats?.stats.words_due_today || 0, iconBg: 'bg-secondary-purple', iconColor: 'text-white' },
-            { icon: BarChart3, label: 'Sentences Due Today', value: userStats?.stats.sentences_due_today || 0, iconBg: 'bg-secondary-purple', iconColor: 'text-white' },
+            { icon: Clock, label: 'Words Due Today', value: userStats?.stats.words_due_today || 0, iconBg: 'bg-primary-yellow', iconColor: 'text-black' },
             { icon: Zap, label: 'Total XP', value: userStats?.user.xp || 0, iconBg: 'bg-primary-yellow', iconColor: 'text-black' },
+            { icon: Flame, label: 'Day Streak', value: userStats?.user.streak || 0, iconBg: 'bg-primary-yellow', iconColor: 'text-black' },
           ].map((stat, index) => (
             <motion.div
               key={index}
@@ -269,7 +273,7 @@ export default function DashboardPage() {
               <div className="flex gap-4">
                 {[
                   { href: '/vocab', icon: Play, bg: 'bg-primary-yellow', text: 'text-black' },
-                  { href: '/sentence', icon: BarChart3, bg: 'bg-secondary-purple', text: 'text-white' },
+                  { href: '/ai-mode/select', icon: Brain, bg: 'bg-secondary-purple', text: 'text-white' },
                   { href: '/pvp', icon: Sword, bg: 'bg-red-500/20', text: 'text-red-500' }
                 ].map((mode, index) => (
                   <motion.div
@@ -283,7 +287,7 @@ export default function DashboardPage() {
                         <mode.icon className={`w-6 h-6 md:w-7 md:h-7 ${mode.text}`} />
                         {/* Tooltip */}
                         <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-1 bg-foreground rounded-md text-label font-semibold text-background whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-lg">
-                          {['Vocab', 'Sentence', 'PvP'][index]} Mode
+                          {index === 0 ? 'Vocab' : index === 1 ? 'Sentence AI' : 'PvP'} Mode
                         </div>
                       </div>
                     </Link>
@@ -348,31 +352,34 @@ export default function DashboardPage() {
                   </Link>
                 </motion.div>
 
-                {/* Sentence Mode */}
+                {/* Sentence Mode AI */}
                 <motion.div
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.15 }}
                 >
-                  <Link href="/sentence">
+                  <Link href="/ai-mode/select">
                     <div className="group bg-card border-2 border-secondary-purple border-opacity-30 rounded-xl md:rounded-3xl p-3 md:p-8 hover:border-secondary-purple transition-colors cursor-pointer shadow-lg hover:shadow-xl">
                       <div className="flex md:flex-col gap-3 md:gap-0">
                         <div className="flex-shrink-0">
                           <div className="flex items-center justify-center w-12 h-12 md:w-16 md:h-16 bg-secondary-purple rounded-lg md:rounded-2xl md:mb-4">
-                            <BarChart3 className="w-6 h-6 md:w-8 md:h-8 text-white" />
+                            <Brain className="w-6 h-6 md:w-8 md:h-8 text-white" />
                           </div>
                         </div>
                         <div className="flex-1 md:flex-none min-w-0">
-                          <h3 className="text-heading-3 mb-1 md:mb-2">Sentence Mode</h3>
+                          <h3 className="text-heading-3 mb-1 md:mb-2 flex items-center gap-2 flex-wrap">
+                            <span>Sentence Mode</span>
+                            <span className="inline-block bg-primary-yellow text-black px-2 py-1 rounded text-body-sm">AI</span>
+                          </h3>
                           <p className="hidden md:block text-body-lg text-muted-foreground mb-3 md:mb-4">
-                            Practice vocabulary in context with full sentences
+                            Learn with AI-generated sentences and real-time translation
                           </p>
                           <div className="flex items-center space-x-1.5 md:space-x-2 text-label">
                             <div className="flex-shrink-0 w-5 h-5 md:w-6 md:h-6 bg-secondary-purple rounded-md flex items-center justify-center">
-                              <Clock className="w-3 h-3 md:w-4 md:h-4 text-white" />
+                              <Brain className="w-3 h-3 md:w-4 md:h-4 text-white" />
                             </div>
-                            <span className="text-secondary-purple font-semibold truncate">
-                              {userStats?.stats.sentences_due_today || 0} sentences
+                            <span className="text-secondary-purple font-semibold">
+                              Unlimited Practice
                             </span>
                           </div>
                         </div>
@@ -485,38 +492,49 @@ export default function DashboardPage() {
               type="text"
               placeholder="Search categories..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setCurrentPage(1); // Reset to page 1 when searching
+              }}
               className="w-full pl-10 md:pl-12 pr-4 py-2 md:py-4 text-body-lg bg-card rounded-xl md:rounded-2xl text-foreground placeholder:text-muted-foreground focus:outline-none transition-colors shadow-lg"
             />
           </div>
 
           {/* Category Grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 md:gap-4">
-            {filteredCategories.map((category, index) => {
-              const learnedCount = category.learned_count || 0;
-              const totalWords = category.count;
-              const progressPercentage = totalWords > 0 ? (learnedCount / totalWords) * 100 : 0;
+          {(() => {
+            // Calculate pagination
+            const totalPages = Math.ceil(filteredCategories.length / CATEGORIES_PER_PAGE);
+            const startIdx = (currentPage - 1) * CATEGORIES_PER_PAGE;
+            const paginatedCategories = filteredCategories.slice(startIdx, startIdx + CATEGORIES_PER_PAGE);
 
-              return (
-                <motion.div
-                  key={category.name}
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: 0.8 + index * 0.05 }}
-                >
-                  <Link href={`/category-menu/${encodeURIComponent(category.name)}`}>
-                    <div className="group bg-card rounded-2xl hover:border-primary-yellow transition-all cursor-pointer h-full flex flex-col overflow-hidden shadow-lg">
-                  {/* Image Container - Full width with rounded top corners */}
-                      <div className="relative w-full aspect-square bg-gradient-to-br from-primary-yellow-light to-secondary-purple-light flex items-center justify-center">
-                        <Image 
-                          src={`/images/categories/${category.name.toLowerCase()}.svg`}
-                          alt={category.name}
-                          fill
-                          className="object-cover"
-                          onError={(e) => {
-                            // Fallback to default image if category image doesn't exist
-                            e.currentTarget.src = '/images/categories/default.svg';
-                          }}
+            return (
+              <div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 md:gap-4">
+                  {paginatedCategories.map((category, index) => {
+                    const learnedCount = category.learned_count || 0;
+                    const totalWords = category.count;
+                    const progressPercentage = totalWords > 0 ? (learnedCount / totalWords) * 100 : 0;
+
+                    return (
+                      <motion.div
+                        key={category.name}
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: 0.8 + index * 0.05 }}
+                      >
+                        <Link href={`/category-menu/${encodeURIComponent(category.name)}`}>
+                          <div className="group bg-card rounded-2xl hover:border-primary-yellow transition-all cursor-pointer h-full flex flex-col overflow-hidden shadow-lg">
+                        {/* Image Container - Full width with rounded top corners */}
+                            <div className="relative w-full aspect-square bg-gradient-to-br from-primary-yellow-light to-secondary-purple-light flex items-center justify-center">
+                              <Image 
+                                src={`/images/categories/${category.name.toLowerCase()}.svg`}
+                                alt={category.name}
+                                fill
+                                className="object-cover"
+                                onError={(e) => {
+                                  // Fallback to default image if category image doesn't exist
+                                  e.currentTarget.src = '/images/categories/default.svg';
+                                }}
                         />
                         
                       </div>
@@ -540,28 +558,72 @@ export default function DashboardPage() {
                           </div>
                           <p className="text-label text-muted-foreground text-center">
                             {learnedCount} of {totalWords} learned
-                          </p>
-                        </div>
-                        
-                        {/* Play Button */}
-                        <button className="w-full py-1 md:py-2 text-label bg-primary-yellow text-black rounded-lg font-semibold flex items-center justify-center gap-2 hover:bg-primary-yellow-hover transition-colors group-hover:scale-105 cursor-pointer">
-                          <Play className="w-3 h-3 md:w-4 md:h-4" />
-                          Play
-                        </button>
+                        </p>
                       </div>
+                      
+                      {/* Play Button */}
+                      <button className="w-full py-1 md:py-2 text-label bg-primary-yellow text-black rounded-lg font-semibold flex items-center justify-center gap-2 hover:bg-primary-yellow-hover transition-colors group-hover:scale-105 cursor-pointer">
+                        <Play className="w-3 h-3 md:w-4 md:h-4" />
+                        Play
+                      </button>
                     </div>
-                  </Link>
-                </motion.div>
+                  </div>
+                </Link>
+              </motion.div>
               );
             })}
-          </div>
-
-          {/* Empty State */}
-          {filteredCategories.length === 0 && (
-            <div className="text-center py-12">
-              <p className="text-muted-foreground text-body-lg">No categories found matching &quot;{searchQuery}&quot;</p>
             </div>
-          )}
+
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-center gap-2 mt-8">
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  className="p-2 rounded-lg bg-primary-yellow border border-primary-yellow hover:bg-primary-yellow/80 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition-colors"
+                >
+                  <ChevronLeft className="w-5 h-5 text-black" />
+                </button>
+
+                <div className="flex items-center gap-2">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                    <button
+                      key={page}
+                      onClick={() => setCurrentPage(page)}
+                      className={`w-8 h-8 rounded-lg font-bold text-base transition-colors cursor-pointer ${
+                        currentPage === page
+                          ? 'bg-primary-yellow text-white'
+                          : 'bg-card hover:bg-card/80'
+                      }`}
+                      style={{
+                        WebkitTextStroke: theme === 'dark' ? '1.5px #000000' : 'none',
+                        paintOrder: 'stroke fill'
+                      }}
+                    >
+                      {page}
+                    </button>
+                  ))}
+                </div>
+
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                  className="p-2 rounded-lg bg-primary-yellow border border-primary-yellow hover:bg-primary-yellow/80 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition-colors"
+                >
+                  <ChevronRight className="w-5 h-5 text-black" />
+                </button>
+              </div>
+            )}
+
+            {/* Empty State */}
+            {filteredCategories.length === 0 && (
+              <div className="text-center py-12">
+                <p className="text-muted-foreground text-body-lg">No categories found matching &quot;{searchQuery}&quot;</p>
+              </div>
+            )}
+          </div>
+            );
+          })()}
         </motion.div>
 
         {/* Edit Display Name Modal */}
